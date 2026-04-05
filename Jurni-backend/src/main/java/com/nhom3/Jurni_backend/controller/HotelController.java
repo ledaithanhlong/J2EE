@@ -1,0 +1,219 @@
+package com.nhom3.Jurni_backend.controller;
+
+import com.nhom3.Jurni_backend.model.Hotel;
+import com.nhom3.Jurni_backend.repository.HotelRepository;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/api/hotels")
+public class HotelController {
+
+    private final HotelRepository hotelRepository;
+
+    public HotelController(HotelRepository hotelRepository) {
+        this.hotelRepository = hotelRepository;
+    }
+
+    // GET /api/hotels - public, chỉ trả approved
+    @GetMapping
+    public ResponseEntity<?> listHotels(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) String sort) {
+        List<Hotel> hotels = hotelRepository.findByStatusOrderByCreatedAtDesc("approved");
+        hotels = filterAndSort(hotels, q, minPrice, maxPrice, sort);
+        return ResponseEntity.ok(hotels.stream().map(this::formatHotel).collect(Collectors.toList()));
+    }
+
+    // GET /api/hotels/all - admin, tất cả hotels
+    @GetMapping("/all")
+    public ResponseEntity<?> listAllHotels(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String status) {
+        List<Hotel> hotels;
+        if (status != null && List.of("pending", "approved", "rejected").contains(status)) {
+            hotels = hotelRepository.findByStatus(status);
+        } else {
+            hotels = hotelRepository.findAllByOrderByCreatedAtDesc();
+        }
+        hotels = filterAndSort(hotels, q, minPrice, maxPrice, sort);
+        return ResponseEntity.ok(hotels.stream().map(this::formatHotel).collect(Collectors.toList()));
+    }
+
+    // GET /api/hotels/:id
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getHotel(@PathVariable String id) {
+        return hotelRepository.findById(id)
+            .map(h -> ResponseEntity.ok(formatHotel(h)))
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    // POST /api/hotels
+    @PostMapping
+    public ResponseEntity<?> createHotel(@RequestBody Hotel hotel) {
+        hotel.setStatus("pending");
+        hotel.setApprovedBy(null);
+        hotel.setApprovedAt(null);
+        hotel.setApprovalNote(null);
+
+        // Tính giá thấp nhất từ roomTypes
+        if (hotel.getRoomTypes() != null && !hotel.getRoomTypes().isEmpty()) {
+            double minPrice = hotel.getRoomTypes().stream()
+                .filter(rt -> rt.getPrice() != null && rt.getPrice() > 0)
+                .mapToDouble(Hotel.RoomType::getPrice)
+                .min()
+                .orElse(0);
+            hotel.setPrice(minPrice);
+        }
+
+        Hotel saved = hotelRepository.save(hotel);
+        return ResponseEntity.status(201).body(saved);
+    }
+
+    // PUT /api/hotels/:id
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateHotel(@PathVariable String id, @RequestBody Hotel body,
+                                          @RequestParam(required = false) String approverUserId) {
+        return hotelRepository.findById(id).map(hotel -> {
+            // Update fields
+            if (body.getName() != null) hotel.setName(body.getName());
+            if (body.getLocation() != null) hotel.setLocation(body.getLocation());
+            if (body.getAddress() != null) hotel.setAddress(body.getAddress());
+            if (body.getDescription() != null) hotel.setDescription(body.getDescription());
+            if (body.getImageUrl() != null) hotel.setImageUrl(body.getImageUrl());
+            if (body.getImages() != null) hotel.setImages(body.getImages());
+            if (body.getCheckInTime() != null) hotel.setCheckInTime(body.getCheckInTime());
+            if (body.getCheckOutTime() != null) hotel.setCheckOutTime(body.getCheckOutTime());
+            if (body.getAmenities() != null) hotel.setAmenities(body.getAmenities());
+            if (body.getPolicies() != null) hotel.setPolicies(body.getPolicies());
+            if (body.getNearbyAttractions() != null) hotel.setNearbyAttractions(body.getNearbyAttractions());
+            if (body.getPublicTransport() != null) hotel.setPublicTransport(body.getPublicTransport());
+            if (body.getStarRating() != null) hotel.setStarRating(body.getStarRating());
+            if (body.getHasBreakfast() != null) hotel.setHasBreakfast(body.getHasBreakfast());
+            if (body.getHasParking() != null) hotel.setHasParking(body.getHasParking());
+            if (body.getHasWifi() != null) hotel.setHasWifi(body.getHasWifi());
+            if (body.getHasPool() != null) hotel.setHasPool(body.getHasPool());
+            if (body.getHasRestaurant() != null) hotel.setHasRestaurant(body.getHasRestaurant());
+            if (body.getHasGym() != null) hotel.setHasGym(body.getHasGym());
+            if (body.getHasSpa() != null) hotel.setHasSpa(body.getHasSpa());
+            if (body.getAllowsPets() != null) hotel.setAllowsPets(body.getAllowsPets());
+            if (body.getIsSmokingAllowed() != null) hotel.setIsSmokingAllowed(body.getIsSmokingAllowed());
+            if (body.getApprovalNote() != null) hotel.setApprovalNote(body.getApprovalNote());
+
+            // Update roomTypes & recalc price
+            if (body.getRoomTypes() != null) {
+                hotel.setRoomTypes(body.getRoomTypes());
+                if (!body.getRoomTypes().isEmpty()) {
+                    double minPrice = body.getRoomTypes().stream()
+                        .filter(rt -> rt.getPrice() != null && rt.getPrice() > 0)
+                        .mapToDouble(Hotel.RoomType::getPrice)
+                        .min().orElse(hotel.getPrice() != null ? hotel.getPrice() : 0);
+                    hotel.setPrice(minPrice);
+                }
+            }
+
+            // Status changes
+            if (body.getStatus() != null) {
+                String oldStatus = hotel.getStatus();
+                hotel.setStatus(body.getStatus());
+                if ("approved".equals(body.getStatus()) && !"approved".equals(oldStatus)) {
+                    hotel.setApprovedBy(approverUserId);
+                    hotel.setApprovedAt(Instant.now());
+                } else if ("pending".equals(body.getStatus())) {
+                    hotel.setApprovedBy(null);
+                    hotel.setApprovedAt(null);
+                } else if ("rejected".equals(body.getStatus())) {
+                    hotel.setApprovedBy(approverUserId);
+                    hotel.setApprovedAt(Instant.now());
+                }
+            }
+
+            Hotel saved = hotelRepository.save(hotel);
+            return ResponseEntity.ok(formatHotel(saved));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    // DELETE /api/hotels/:id
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteHotel(@PathVariable String id) {
+        return hotelRepository.findById(id).map(hotel -> {
+            hotelRepository.delete(hotel);
+            return ResponseEntity.ok(Map.of("ok", true));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    // Helper: filter and sort
+    private List<Hotel> filterAndSort(List<Hotel> hotels, String q, Double minPrice, Double maxPrice, String sort) {
+        return hotels.stream()
+            .filter(h -> q == null || (h.getName() != null && h.getName().toLowerCase().contains(q.toLowerCase())))
+            .filter(h -> minPrice == null || (h.getPrice() != null && h.getPrice() >= minPrice))
+            .filter(h -> maxPrice == null || (h.getPrice() != null && h.getPrice() <= maxPrice))
+            .sorted((a, b) -> {
+                if ("price_asc".equals(sort)) return Double.compare(
+                    a.getPrice() != null ? a.getPrice() : 0,
+                    b.getPrice() != null ? b.getPrice() : 0);
+                if ("price_desc".equals(sort)) return Double.compare(
+                    b.getPrice() != null ? b.getPrice() : 0,
+                    a.getPrice() != null ? a.getPrice() : 0);
+                // Default: newest first
+                if (b.getCreatedAt() != null && a.getCreatedAt() != null)
+                    return b.getCreatedAt().compareTo(a.getCreatedAt());
+                return 0;
+            })
+            .collect(Collectors.toList());
+    }
+
+    // Helper: format hotel response (matching frontend expectations)
+    private Map<String, Object> formatHotel(Hotel h) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", h.getId());
+        map.put("name", h.getName());
+        map.put("location", h.getLocation());
+        map.put("address", h.getAddress());
+        map.put("price", h.getPrice() != null ? h.getPrice() : 0);
+        map.put("star_rating", h.getStarRating());
+        map.put("image_url", h.getImageUrl());
+        map.put("images", h.getImages() != null ? h.getImages() : List.of());
+        map.put("description", h.getDescription());
+        map.put("amenities", h.getAmenities() != null ? h.getAmenities() : List.of());
+        map.put("checkIn", h.getCheckInTime() != null ? h.getCheckInTime() : "14:00");
+        map.put("checkOut", h.getCheckOutTime() != null ? h.getCheckOutTime() : "12:00");
+        map.put("check_in_time", h.getCheckInTime() != null ? h.getCheckInTime() : "14:00");
+        map.put("check_out_time", h.getCheckOutTime() != null ? h.getCheckOutTime() : "12:00");
+        map.put("room_types", h.getRoomTypes() != null ? h.getRoomTypes() : List.of());
+        int totalRooms = h.getRoomTypes() != null ? h.getRoomTypes().stream()
+            .mapToInt(rt -> rt.getQuantity() != null ? rt.getQuantity() : 0).sum() : 0;
+        map.put("rooms", totalRooms);
+        map.put("total_rooms", totalRooms);
+        map.put("policies", h.getPolicies() != null ? h.getPolicies() :
+            Map.of("cancel","Miễn phí hủy trước 48 giờ","children","Trẻ em ở miễn phí",
+                   "pets","Không cho phép thú cưng","smoking","Không hút thuốc"));
+        map.put("nearby_attractions", h.getNearbyAttractions() != null ? h.getNearbyAttractions() : List.of());
+        map.put("public_transport", h.getPublicTransport() != null ? h.getPublicTransport() : List.of());
+        map.put("has_breakfast", h.getHasBreakfast() != null && h.getHasBreakfast());
+        map.put("has_parking", h.getHasParking() != null && h.getHasParking());
+        map.put("has_wifi", h.getHasWifi() == null || h.getHasWifi());
+        map.put("has_pool", h.getHasPool() != null && h.getHasPool());
+        map.put("has_restaurant", h.getHasRestaurant() != null && h.getHasRestaurant());
+        map.put("has_gym", h.getHasGym() != null && h.getHasGym());
+        map.put("has_spa", h.getHasSpa() != null && h.getHasSpa());
+        map.put("allows_pets", h.getAllowsPets() != null && h.getAllowsPets());
+        map.put("is_smoking_allowed", h.getIsSmokingAllowed() != null && h.getIsSmokingAllowed());
+        map.put("status", h.getStatus());
+        map.put("approved_by", h.getApprovedBy());
+        map.put("approved_at", h.getApprovedAt());
+        map.put("approval_note", h.getApprovalNote());
+        map.put("createdAt", h.getCreatedAt());
+        map.put("updatedAt", h.getUpdatedAt());
+        return map;
+    }
+}
