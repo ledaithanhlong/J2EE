@@ -249,13 +249,6 @@ public class PaymentController {
         }
     }
 
-    // ── Support for PaymentPage /api/payments/checkout alias ────────────────
-    @PostMapping("/checkout")
-    public ResponseEntity<?> checkout(@RequestBody Map<String, Object> body) {
-        return processPayment(body);
-    }
-    // ────────────────────────────────────────────────────────────────────────
-
     private String detectServiceType(String type, String id) {
         if (type == null && id == null) return null;
         String t = type != null ? type.toLowerCase() : "";
