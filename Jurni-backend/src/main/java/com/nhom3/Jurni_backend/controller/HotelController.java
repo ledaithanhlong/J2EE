@@ -96,6 +96,7 @@ public class HotelController {
             if (body.getPolicies() != null) hotel.setPolicies(body.getPolicies());
             if (body.getNearbyAttractions() != null) hotel.setNearbyAttractions(body.getNearbyAttractions());
             if (body.getPublicTransport() != null) hotel.setPublicTransport(body.getPublicTransport());
+            if (body.getTotalRooms() != null) hotel.setTotalRooms(body.getTotalRooms());
             if (body.getApprovalNote() != null) hotel.setApprovalNote(body.getApprovalNote());
             if (body.getStatus() != null) hotel.setStatus(body.getStatus());
 

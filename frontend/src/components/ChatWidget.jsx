@@ -10,8 +10,8 @@ const initialMessages = [
   },
 ];
 
-export default function ChatWidget() {
-  const { user } = useUser();
+export default function ChatWidget({ clerkEnabled }) {
+  const user = clerkEnabled ? useUser().user : null;
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
@@ -66,14 +66,18 @@ export default function ChatWidget() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold">Jurni Care</p>
-                <SignedIn>
-                  <p className="text-xs text-white/80">
-                    Xin chào, {user?.firstName || user?.username || 'bạn'} 👋
-                  </p>
-                </SignedIn>
-                <SignedOut>
-                  <p className="text-xs text-white/80">Đăng nhập để đồng bộ hội thoại</p>
-                </SignedOut>
+                {clerkEnabled && (
+                  <>
+                    <SignedIn>
+                      <p className="text-xs text-white/80">
+                        Xin chào, {user?.firstName || user?.username || 'bạn'} 👋
+                      </p>
+                    </SignedIn>
+                    <SignedOut>
+                      <p className="text-xs text-white/80">Đăng nhập để đồng bộ hội thoại</p>
+                    </SignedOut>
+                  </>
+                )}
               </div>
               <button
                 type="button"

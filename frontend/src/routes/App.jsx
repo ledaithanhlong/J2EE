@@ -32,7 +32,8 @@ import CareersPage from '../pages/CareersPage.jsx';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const UserSync = () => {
+const UserSync = ({ clerkEnabled }) => {
+  if (!clerkEnabled) return null;
   const { user } = useUser();
   const { isSignedIn } = useAuth();
 
@@ -268,7 +269,7 @@ function SyncUser() {
 export default function App({ clerkEnabled }) {
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      <UserSync />
+      <UserSync clerkEnabled={clerkEnabled} />
       <Nav clerkEnabled={clerkEnabled} />
       <main className="flex-1 pt-16">
         {/* Sync user when signed in */}
