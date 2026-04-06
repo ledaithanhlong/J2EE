@@ -12,6 +12,7 @@ import VouchersPage from '../pages/VouchersPage.jsx';
 import FavoritesPage from '../pages/FavoritesPage.jsx';
 import NotificationsPage from '../pages/NotificationsPage.jsx';
 import AdminDashboard from '../pages/AdminDashboard.jsx';
+import AdminVouchersPage from '../pages/AdminVouchersPage.jsx';
 import SignInPage from '../pages/SignInPage.jsx';
 import SignUpPage from '../pages/SignUpPage.jsx';
 import VerifyEmailPage from '../pages/VerifyEmailPage.jsx';
@@ -30,7 +31,7 @@ import TeamPage from '../pages/TeamPage.jsx';
 import BookingsPage from '../pages/BookingsPage.jsx';
 import CareersPage from '../pages/CareersPage.jsx';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 const NavUserSection = () => {
   const { user } = useUser();
@@ -44,13 +45,22 @@ const NavUserSection = () => {
       <Link to="/favorites" className="text-sm text-white/90 hover:text-orange-accent transition drop-shadow-sm whitespace-nowrap">Yêu thích</Link>
       <Link to="/notifications" className="text-sm text-white/90 hover:text-orange-accent transition drop-shadow-sm whitespace-nowrap">Thông báo</Link>
       {isAdmin && (
-        <Link
-          to="/admin"
-          className="text-sm text-white px-3 py-1 rounded-lg transition shadow-md font-medium hover:opacity-90 whitespace-nowrap"
-          style={{ backgroundColor: '#FF6B35', borderRadius: '8px' }}
-        >
-          Quản trị
-        </Link>
+        <>
+          <Link
+            to="/admin"
+            className="text-sm text-white px-3 py-1 rounded-lg transition shadow-md font-medium hover:opacity-90 whitespace-nowrap"
+            style={{ backgroundColor: '#FF6B35', borderRadius: '8px' }}
+          >
+            Quản trị
+          </Link>
+          <Link
+            to="/admin/vouchers"
+            className="text-sm text-white px-3 py-1 rounded-lg transition shadow-md font-medium hover:opacity-90 whitespace-nowrap"
+            style={{ backgroundColor: '#0A4EC3', borderRadius: '8px' }}
+          >
+            Voucher Admin
+          </Link>
+        </>
       )}
       <UserButton appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
     </>
@@ -91,6 +101,7 @@ const Nav = ({ clerkEnabled }) => {
               <Link to="/flights" className="text-white/90 hover:text-orange-accent font-medium transition drop-shadow-sm">Vé máy bay</Link>
               <Link to="/cars" className="text-white/90 hover:text-orange-accent font-medium transition drop-shadow-sm">Cho thuê xe</Link>
               <Link to="/activities" className="text-white/90 hover:text-orange-accent font-medium transition drop-shadow-sm">Hoạt động & Vui chơi</Link>
+              <Link to="/promotions" className="text-white/90 hover:text-orange-accent font-medium transition drop-shadow-sm">Ưu đãi</Link>
               <Link to="/vouchers" className="text-white/90 hover:text-orange-accent font-medium transition drop-shadow-sm">Voucher</Link>
             </div>
           </div>
@@ -242,8 +253,10 @@ export default function App({ clerkEnabled }) {
           <Route path="/favorites" element={<div className="max-w-7xl mx-auto px-4 py-6"><FavoritesPage /></div>} />
           <Route path="/notifications" element={<div className="max-w-7xl mx-auto px-4 py-6"><NotificationsPage /></div>} />
           <Route path="/admin" element={<AdminOnly clerkEnabled={clerkEnabled}><div className="max-w-7xl mx-auto px-4 py-6"><AdminDashboard /></div></AdminOnly>} />
+          <Route path="/admin/vouchers" element={<AdminOnly clerkEnabled={clerkEnabled}><AdminVouchersPage /></AdminOnly>} />
           <Route path="/bookings" element={<div className="max-w-7xl mx-auto px-4 py-6"><BookingsPage /></div>} />
           <Route path="/checkout" element={<PaymentPage />} />
+          <Route path="/payment" element={<PaymentPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/team" element={<TeamPage />} />
           <Route path="/support" element={<SupportPage />} />
@@ -251,7 +264,7 @@ export default function App({ clerkEnabled }) {
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/careers" element={<CareersPage />} />
           <Route path="/price-alerts" element={<div className="max-w-7xl mx-auto px-4 py-6"><PriceAlertPage /></div>} />
-          <Route path="/promotions" element={<div className="max-w-7xl mx-auto px-4 py-6"><PromotionsPage /></div>} />
+          <Route path="/promotions" element={<PromotionsPage />} />
           <Route path="/careers/apply/:jobId" element={<JobApplicationPage />} />
           <Route path="/flight-ideas" element={<div className="max-w-7xl mx-auto px-4 py-6"><FlightIdeasPage /></div>} />
         </Routes>

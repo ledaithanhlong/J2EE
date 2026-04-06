@@ -14,11 +14,14 @@ public class PaymentController {
 
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
+    private final VoucherRepository voucherRepository;
 
     public PaymentController(BookingRepository bookingRepository,
-                              UserRepository userRepository) {
+                              UserRepository userRepository,
+                              VoucherRepository voucherRepository) {
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
+        this.voucherRepository = voucherRepository;
     }
 
     private static final List<Map<String, Object>> PAYMENT_METHODS = List.of(
@@ -59,6 +62,7 @@ public class PaymentController {
             Map<String, Object> customer = (Map<String, Object>) body.get("customer");
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> items = (List<Map<String, Object>>) body.getOrDefault("items", List.of());
+            String voucherCode = (String) body.get("voucherCode");
 
             if (amountObj == null || Double.parseDouble(amountObj.toString()) <= 0) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Số tiền thanh toán không hợp lệ."));
@@ -84,6 +88,48 @@ public class PaymentController {
             double feeFixed = ((Number) method.get("feeFixed")).doubleValue();
             double fee = amount * feePercent + feeFixed;
             String transactionRef = "PAY-" + System.currentTimeMillis();
+
+            // ── Voucher processing ──────────────────────────────────────────
+            double discountAmount = 0;
+            Map<String, Object> voucherInfo = null;
+
+            if (voucherCode != null && !voucherCode.isBlank()) {
+                Voucher voucher = voucherRepository.findByCode(voucherCode.trim().toUpperCase()).orElse(null);
+                if (voucher != null && Boolean.TRUE.equals(voucher.getIsActive())) {
+                    Instant now = Instant.now();
+                    boolean expired = voucher.getExpiryDate() != null && voucher.getExpiryDate().isBefore(now);
+                    boolean notStarted = voucher.getStartDate() != null && voucher.getStartDate().isAfter(now);
+                    int used = voucher.getCurrentUsage() != null ? voucher.getCurrentUsage() : 0;
+                    boolean overLimit = voucher.getUsageLimit() != null && voucher.getUsageLimit() > 0
+                                       && used >= voucher.getUsageLimit();
+
+                    if (!expired && !notStarted && !overLimit) {
+                        // Calculate discount on subtotal (before fee)
+                        if (voucher.getDiscountPercent() != null && voucher.getDiscountPercent() > 0) {
+                            discountAmount = amount * voucher.getDiscountPercent() / 100.0;
+                            if (voucher.getMaxDiscount() != null && voucher.getMaxDiscount() > 0) {
+                                discountAmount = Math.min(discountAmount, voucher.getMaxDiscount());
+                            }
+                        } else if (voucher.getDiscountAmount() != null) {
+                            discountAmount = voucher.getDiscountAmount();
+                        }
+                        discountAmount = Math.min(discountAmount, amount);
+                        discountAmount = Math.round(discountAmount);
+
+                        // Increase usage count
+                        voucher.setCurrentUsage(used + 1);
+                        voucherRepository.save(voucher);
+
+                        voucherInfo = Map.of(
+                            "code", voucher.getCode(),
+                            "discount_amount", discountAmount
+                        );
+                    }
+                }
+            }
+            // ────────────────────────────────────────────────────────────────
+
+            double finalAmount = Math.max(0, amount - discountAmount + fee);
 
             // Find or create system user
             String systemUserId = userRepository.findByEmail("system@jurni.com")
@@ -130,26 +176,37 @@ public class PaymentController {
                 }
             }
 
-            return ResponseEntity.status(201).body(Map.of(
-                "success", true,
-                "message", "Thanh toán thành công. Hóa đơn đã được gửi tới email của bạn.",
-                "payment", Map.of(
-                    "reference", transactionRef,
-                    "status", "succeeded",
-                    "method", method.get("id"),
-                    "amount", amount,
-                    "currency", body.getOrDefault("currency", "VND"),
-                    "fee", Math.round(fee),
-                    "processedAt", Instant.now().toString()
-                ),
-                "booking", createdBookings,
-                "customer", customer,
-                "items", items
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("success", true);
+            response.put("message", "Thanh toán thành công. Hóa đơn đã được gửi tới email của bạn.");
+            response.put("payment", Map.of(
+                "reference", transactionRef,
+                "status", "succeeded",
+                "method", method.get("id"),
+                "amount", amount,
+                "discount_amount", discountAmount,
+                "fee", Math.round(fee),
+                "final_amount", Math.round(finalAmount),
+                "currency", body.getOrDefault("currency", "VND"),
+                "processedAt", Instant.now().toString()
             ));
+            response.put("booking", createdBookings);
+            response.put("customer", customer);
+            response.put("items", items);
+            if (voucherInfo != null) response.put("voucher", voucherInfo);
+
+            return ResponseEntity.status(201).body(response);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
+
+    // ── Support for PaymentPage /api/payments/checkout alias ────────────────
+    @PostMapping("/checkout")
+    public ResponseEntity<?> checkout(@RequestBody Map<String, Object> body) {
+        return processPayment(body);
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     private String detectServiceType(String type, String id) {
         if (type == null && id == null) return null;
