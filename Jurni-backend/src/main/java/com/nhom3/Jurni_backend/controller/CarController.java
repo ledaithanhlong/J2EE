@@ -32,11 +32,41 @@ public class CarController {
 
     @PostMapping
     public ResponseEntity<?> createCar(@RequestBody Car car) {
-        return ResponseEntity.status(201).body(carRepository.save(car));
+        // Validation
+        if (car.getCompany() == null || car.getCompany().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Hãng xe không được để trống"));
+        }
+        if (car.getModel() == null || car.getModel().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Model không được để trống"));
+        }
+        if (car.getType() == null || car.getType().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Loại xe không được để trống"));
+        }
+        if (car.getSeats() == null || car.getSeats() <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Số chỗ ngồi phải > 0"));
+        }
+        if (car.getPricePerDay() == null || car.getPricePerDay() <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Giá thuê phải > 0"));
+        }
+        if (car.getLocation() == null || car.getLocation().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Địa điểm không được để trống"));
+        }
+        if (car.getAvailable() == null) {
+            car.setAvailable(true);
+        }
+        Car saved = carRepository.save(car);
+        System.out.println("✓ Created car: " + saved.getCompany() + " " + saved.getModel() + " id=" + saved.getId());
+        return ResponseEntity.status(201).body(saved);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateCar(@PathVariable String id, @RequestBody Car body) {
+        System.out.println("🔄 PUT /cars/" + id);
+        System.out.println("   Request body: company=" + body.getCompany() + 
+                           ", model=" + body.getModel() + 
+                           ", pricePerDay=" + body.getPricePerDay() + 
+                           ", imageUrl=" + body.getImageUrl());
+        
         return carRepository.findById(id).map(car -> {
             if (body.getCompany() != null) car.setCompany(body.getCompany());
             if (body.getModel() != null) car.setModel(body.getModel());
@@ -49,7 +79,10 @@ public class CarController {
             if (body.getDescription() != null) car.setDescription(body.getDescription());
             if (body.getSpecifications() != null) car.setSpecifications(body.getSpecifications());
             if (body.getAmenities() != null) car.setAmenities(body.getAmenities());
-            return ResponseEntity.ok(carRepository.save(car));
+            
+            Car updated = carRepository.save(car);
+            System.out.println("   ✓ Updated car " + id + " - pricePerDay=" + updated.getPricePerDay());
+            return ResponseEntity.ok(updated);
         }).orElse(ResponseEntity.notFound().build());
     }
 

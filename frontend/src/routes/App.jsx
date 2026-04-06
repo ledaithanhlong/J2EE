@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
-import { SignedIn, SignedOut, UserButton, useUser, useAuth } from '@clerk/clerk-react';
+import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';import {
+  SignedIn,
+  SignedOut,
+  UserButton,
+  useUser,
+  useAuth,
+  AuthenticateWithRedirectCallback
+} from '@clerk/clerk-react';
 import axios from 'axios';
 import HomePage from '../pages/HomePage.jsx';
 import HotelsPage from '../pages/HotelsPage.jsx';
@@ -12,6 +18,7 @@ import VouchersPage from '../pages/VouchersPage.jsx';
 import FavoritesPage from '../pages/FavoritesPage.jsx';
 import NotificationsPage from '../pages/NotificationsPage.jsx';
 import AdminDashboard from '../pages/AdminDashboard.jsx';
+import AdminVouchersPage from '../pages/AdminVouchersPage.jsx';
 import SignInPage from '../pages/SignInPage.jsx';
 import SignUpPage from '../pages/SignUpPage.jsx';
 import VerifyEmailPage from '../pages/VerifyEmailPage.jsx';
@@ -30,27 +37,83 @@ import TeamPage from '../pages/TeamPage.jsx';
 import BookingsPage from '../pages/BookingsPage.jsx';
 import CareersPage from '../pages/CareersPage.jsx';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+
+const UserSync = ({ clerkEnabled }) => {
+  if (!clerkEnabled) return null;
+  const { user } = useUser();
+  const { isSignedIn } = useAuth();
+
+  useEffect(() => {
+    if (isSignedIn && user) {
+      axios.post(`${API}/users/sync`, {
+        clerkId: user.id,
+        email: user.primaryEmailAddress?.emailAddress,
+        name: user.fullName || user.username
+      }).catch(err => console.error("User sync failed", err));
+    }
+  }, [isSignedIn, user]);
+
+  return null;
+};
 
 const NavUserSection = () => {
   const { user } = useUser();
+  const { getToken } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
   const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim());
   const isAdmin = user?.primaryEmailAddress?.emailAddress && adminEmails.includes(user.primaryEmailAddress.emailAddress);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const token = await getToken();
+        if (!token || !user) return;
+        const res = await axios.get(`${API}/notifications?userId=${user.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const unread = res.data.filter(n => !n.isRead).length;
+        setUnreadCount(unread);
+      } catch (e) {
+        console.error('Failed to fetch unread notifications', e);
+      }
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000); // Check every 30s
+    return () => clearInterval(interval);
+  }, [user, getToken]);
 
   return (
     <>
       <Link to="/bookings" className="text-sm text-white/90 hover:text-orange-accent transition drop-shadow-sm whitespace-nowrap">Đặt chỗ của tôi</Link>
       <Link to="/checkout" className="text-sm text-white/90 hover:text-orange-accent transition drop-shadow-sm whitespace-nowrap">Thanh toán</Link>
       <Link to="/favorites" className="text-sm text-white/90 hover:text-orange-accent transition drop-shadow-sm whitespace-nowrap">Yêu thích</Link>
-      <Link to="/notifications" className="text-sm text-white/90 hover:text-orange-accent transition drop-shadow-sm whitespace-nowrap">Thông báo</Link>
+      <Link to="/notifications" className="text-sm text-white/90 hover:text-orange-accent transition drop-shadow-sm whitespace-nowrap relative">
+        Thông báo
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-2 bg-orange-500 text-white text-[10px] font-bold px-1 rounded-full min-w-[16px] h-4 flex items-center justify-center border border-blue-900">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </Link>
       {isAdmin && (
-        <Link
-          to="/admin"
-          className="text-sm text-white px-3 py-1 rounded-lg transition shadow-md font-medium hover:opacity-90 whitespace-nowrap"
-          style={{ backgroundColor: '#FF6B35', borderRadius: '8px' }}
-        >
-          Quản trị
-        </Link>
+        <>
+          <Link
+            to="/admin"
+            className="text-sm text-white px-3 py-1 rounded-lg transition shadow-md font-medium hover:opacity-90 whitespace-nowrap"
+            style={{ backgroundColor: '#FF6B35', borderRadius: '8px' }}
+          >
+            Quản trị
+          </Link>
+          <Link
+            to="/admin/vouchers"
+            className="text-sm text-white px-3 py-1 rounded-lg transition shadow-md font-medium hover:opacity-90 whitespace-nowrap"
+            style={{ backgroundColor: '#0A4EC3', borderRadius: '8px' }}
+          >
+            Voucher Admin
+          </Link>
+        </>
       )}
       <UserButton appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
     </>
@@ -91,6 +154,7 @@ const Nav = ({ clerkEnabled }) => {
               <Link to="/flights" className="text-white/90 hover:text-orange-accent font-medium transition drop-shadow-sm">Vé máy bay</Link>
               <Link to="/cars" className="text-white/90 hover:text-orange-accent font-medium transition drop-shadow-sm">Cho thuê xe</Link>
               <Link to="/activities" className="text-white/90 hover:text-orange-accent font-medium transition drop-shadow-sm">Hoạt động & Vui chơi</Link>
+              <Link to="/promotions" className="text-white/90 hover:text-orange-accent font-medium transition drop-shadow-sm">Ưu đãi</Link>
               <Link to="/vouchers" className="text-white/90 hover:text-orange-accent font-medium transition drop-shadow-sm">Voucher</Link>
             </div>
           </div>
@@ -125,6 +189,10 @@ const Nav = ({ clerkEnabled }) => {
 
 const AdminOnly = ({ children, clerkEnabled }) => {
   if (!clerkEnabled) return <Navigate to="/" replace />;
+  return <AdminOnlyWithClerk>{children}</AdminOnlyWithClerk>;
+};
+
+const AdminOnlyWithClerk = ({ children }) => {
   const { user, isLoaded } = useUser();
   const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim());
   const isAdmin = user?.primaryEmailAddress?.emailAddress && adminEmails.includes(user.primaryEmailAddress.emailAddress);
@@ -218,6 +286,7 @@ function SyncUser() {
 export default function App({ clerkEnabled }) {
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      <UserSync clerkEnabled={clerkEnabled} />
       <Nav clerkEnabled={clerkEnabled} />
       <main className="flex-1 pt-16">
         {/* Sync user when signed in */}
@@ -242,22 +311,25 @@ export default function App({ clerkEnabled }) {
           <Route path="/favorites" element={<div className="max-w-7xl mx-auto px-4 py-6"><FavoritesPage /></div>} />
           <Route path="/notifications" element={<div className="max-w-7xl mx-auto px-4 py-6"><NotificationsPage /></div>} />
           <Route path="/admin" element={<AdminOnly clerkEnabled={clerkEnabled}><div className="max-w-7xl mx-auto px-4 py-6"><AdminDashboard /></div></AdminOnly>} />
+          <Route path="/admin/vouchers" element={<AdminOnly clerkEnabled={clerkEnabled}><AdminVouchersPage /></AdminOnly>} />
           <Route path="/bookings" element={<div className="max-w-7xl mx-auto px-4 py-6"><BookingsPage /></div>} />
           <Route path="/checkout" element={<PaymentPage />} />
+          <Route path="/payment" element={<PaymentPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/team" element={<TeamPage />} />
           <Route path="/support" element={<SupportPage />} />
           <Route path="/terms" element={<TermsPage />} />
+          <Route path="/sso-callback"element={clerkEnabled ? (<AuthenticateWithRedirectCallback />) : (<Navigate to="/" replace />)}/>
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/careers" element={<CareersPage />} />
           <Route path="/price-alerts" element={<div className="max-w-7xl mx-auto px-4 py-6"><PriceAlertPage /></div>} />
-          <Route path="/promotions" element={<div className="max-w-7xl mx-auto px-4 py-6"><PromotionsPage /></div>} />
+          <Route path="/promotions" element={<PromotionsPage />} />
           <Route path="/careers/apply/:jobId" element={<JobApplicationPage />} />
           <Route path="/flight-ideas" element={<div className="max-w-7xl mx-auto px-4 py-6"><FlightIdeasPage /></div>} />
         </Routes>
 
       </main>
-      <ChatWidget />
+      {clerkEnabled && <ChatWidget clerkEnabled={clerkEnabled} />}
       <footer className="text-white" style={{ backgroundColor: '#0D47A1' }}>
         <div className="max-w-7xl mx-auto px-4 py-8 grid gap-8 md:grid-cols-3">
           <div>
@@ -280,8 +352,8 @@ export default function App({ clerkEnabled }) {
               Thông tin liên hệ
             </h3>
             <ul className="space-y-2 text-sm text-white/80">
-              <li>
-                Giảng viên hướng dẫn: <span className="font-semibold">Trần Đăng Khoa</span>
+           <li>
+                Giảng viên hướng dẫn: <span className="font-semibold">Bùi Phú Khuyên</span>
               </li>
               <li>
                 Lớp học: <span className="font-semibold">22DTHD4</span>

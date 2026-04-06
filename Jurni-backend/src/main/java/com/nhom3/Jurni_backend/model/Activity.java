@@ -7,6 +7,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Instant;
 import java.util.List;
@@ -26,10 +27,17 @@ public class Activity {
     private Double price;
     private String duration;
     private String description;
+
+    @JsonProperty("image_url")
     private String imageUrl;
+
     private String category;
     private List<String> includes;
+    private List<String> highlights;
+
+    @JsonProperty("meeting_point")
     private String meetingPoint;
+
     private Map<String, Object> policies;
 
     @CreatedDate

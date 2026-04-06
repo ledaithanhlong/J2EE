@@ -78,6 +78,7 @@ const emptyForm = {
   policies: defaultPolicies,
   nearby_attractions: [],
   public_transport: [],
+  total_rooms: 0,
   approval_note: '',
   status: 'pending'
 };
@@ -224,6 +225,7 @@ export default function AdminHotels() {
     policies: hotel.policies ?? defaultPolicies,
     nearby_attractions: Array.isArray(hotel.nearby_attractions) ? hotel.nearby_attractions : [],
     public_transport: Array.isArray(hotel.public_transport) ? hotel.public_transport : [],
+    total_rooms: hotel.total_rooms ?? 0,
     approval_note: hotel.approval_note ?? '',
     status: hotel.status ?? 'pending'
   });
@@ -272,8 +274,10 @@ export default function AdminHotels() {
       };
       setForm((prev) => {
         const updated = { ...prev, room_types: [...prev.room_types, roomType] };
-        // Tự động tính total_rooms
+        // Tự động tính total_rooms và price (giá rẻ nhất)
         updated.total_rooms = updated.room_types.reduce((sum, rt) => sum + rt.quantity, 0);
+        const minPrice = Math.min(...updated.room_types.map(rt => rt.price));
+        updated.price = minPrice !== Infinity ? minPrice : 0;
         return updated;
       });
       setNewRoomType({ type: 'standard', quantity: 1, price: '', capacity: 2, images: [] });
@@ -285,8 +289,10 @@ export default function AdminHotels() {
   const removeRoomType = (index) => {
     setForm((prev) => {
       const updated = { ...prev, room_types: prev.room_types.filter((_, i) => i !== index) };
-      // Tự động tính lại total_rooms
+      // Tự động tính lại total_rooms và price
       updated.total_rooms = updated.room_types.reduce((sum, rt) => sum + rt.quantity, 0);
+      const minPrice = Math.min(...updated.room_types.map(rt => rt.price));
+      updated.price = minPrice !== Infinity ? minPrice : 0;
       return updated;
     });
   };
@@ -300,11 +306,13 @@ export default function AdminHotels() {
         value = isNaN(numValue) || numValue < 1 ? 1 : numValue;
       }
       updated.room_types[index] = { ...updated.room_types[index], [field]: value };
-      // Tự động tính lại total_rooms
+      // Tự động tính lại total_rooms và price
       updated.total_rooms = updated.room_types.reduce((sum, rt) => {
         const qty = rt.quantity || 0;
         return sum + (isNaN(qty) ? 0 : qty);
       }, 0);
+      const minPrice = Math.min(...updated.room_types.map(rt => rt.price));
+      updated.price = minPrice !== Infinity ? minPrice : 0;
       return updated;
     });
   };
@@ -330,6 +338,7 @@ export default function AdminHotels() {
         policies: Object.values(form.policies).some((v) => v) ? form.policies : null,
         nearby_attractions: form.nearby_attractions.length > 0 ? form.nearby_attractions : null,
         public_transport: form.public_transport.length > 0 ? form.public_transport : null,
+        total_rooms: form.total_rooms || 0,
         approval_note: form.approval_note || null,
         status: form.status
       };
@@ -547,15 +556,10 @@ export default function AdminHotels() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Giá mỗi đêm (VND)</label>
-                  <input
-                    type="number"
-                    value={form.price}
-                    onChange={(e) => setForm({ ...form, price: e.target.value })}
-                    className="w-full border rounded px-3 py-2"
-                    min="0"
-                    placeholder="Ví dụ: 1500000"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Giá hiển thị (Tự động từ loại phòng)</label>
+                  <div className="w-full border bg-gray-50 rounded px-3 py-2 text-gray-600">
+                    {form.price ? Number(form.price).toLocaleString('vi-VN') : 0} VND
+                  </div>
                 </div>
 
                 <div>
@@ -1057,7 +1061,7 @@ export default function AdminHotels() {
                   />
                 </div>
 
-                <div className="space-y-3">
+              <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Giá mỗi đêm</span>
                     <span className="font-semibold text-gray-900">
@@ -1066,10 +1070,39 @@ export default function AdminHotels() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Hạng sao</span>
-                    <span className="font-semibold text-gray-900">
-                      {selectedHotel.star_rating ? `${selectedHotel.star_rating} sao` : 'Chưa xác định'}
+                    <span className="font-semibold text-yellow-600">
+                      {selectedHotel.star_rating ? `★ ${selectedHotel.star_rating}/5` : 'Chưa xác định'}
                     </span>
                   </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Tổng phòng</span>
+                    <span className="font-semibold text-gray-900">{selectedHotel.total_rooms || 0} phòng</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Check-in</span>
+                    <span className="font-semibold text-gray-900">Từ {selectedHotel.check_in_time || '14:00'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Check-out</span>
+                    <span className="font-semibold text-gray-900">Trước {selectedHotel.check_out_time || '12:00'}</span>
+                  </div>
+                  {(selectedHotel.amenities || []).length > 0 && (
+                    <div className="pt-3 border-t border-gray-200">
+                      <p className="text-xs font-semibold text-gray-600 mb-2">TIỆN NGHI</p>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedHotel.amenities.slice(0, 5).map((amenity, idx) => (
+                          <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                            {amenity}
+                          </span>
+                        ))}
+                        {selectedHotel.amenities.length > 5 && (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                            +{selectedHotel.amenities.length - 5}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {selectedHotel.status === 'pending' && (

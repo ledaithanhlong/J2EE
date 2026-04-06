@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth, useUser } from '@clerk/clerk-react';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -9,30 +9,41 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { getToken } = useAuth();
+  const { user } = useUser();
 
   useEffect(() => {
     let mounted = true;
-    (async () => {
+    const fetchNotifications = async () => {
       try {
         setLoading(true);
         const token = await getToken();
-        const res = await axios.get(`${API}/notifications`, {
+        const res = await axios.get(`${API}/notifications?userId=${user?.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!mounted) return;
         setRows(res.data || []);
+        
+        // Mark all as read when opening the page
+        const unreadIds = (res.data || []).filter(n => !n.isRead).map(n => n.id);
+        for (const id of unreadIds) {
+          await axios.put(`${API}/notifications/${id}/read`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        }
       } catch (err) {
         if (!mounted) return;
         setError(err.response?.data?.error || 'Không thể tải thông báo. Vui lòng thử lại sau.');
       } finally {
         if (mounted) setLoading(false);
       }
-    })();
+    };
+    
+    fetchNotifications();
 
     return () => {
       mounted = false;
     };
-  }, [getToken]);
+  }, [getToken, user]);
 
   if (loading) {
     return (

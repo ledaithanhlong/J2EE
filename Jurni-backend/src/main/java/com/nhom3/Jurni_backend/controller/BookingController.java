@@ -17,19 +17,22 @@ public class BookingController {
     private final CarRepository carRepository;
     private final ActivityRepository activityRepository;
     private final UserRepository userRepository;
+    private final NotificationRepository notificationRepository;
 
     public BookingController(BookingRepository bookingRepository,
                              HotelRepository hotelRepository,
                              FlightRepository flightRepository,
                              CarRepository carRepository,
                              ActivityRepository activityRepository,
-                             UserRepository userRepository) {
+                             UserRepository userRepository,
+                             NotificationRepository notificationRepository) {
         this.bookingRepository = bookingRepository;
         this.hotelRepository = hotelRepository;
         this.flightRepository = flightRepository;
         this.carRepository = carRepository;
         this.activityRepository = activityRepository;
         this.userRepository = userRepository;
+        this.notificationRepository = notificationRepository;
     }
 
     // GET /api/bookings?clerkId=xxx (user sees own, admin sees all)
@@ -38,19 +41,23 @@ public class BookingController {
             @RequestParam(required = false) String clerkId) {
         List<Booking> bookings;
 
-        if (clerkId != null) {
+        if (clerkId != null && !clerkId.trim().isEmpty()) {
             // Check if admin
             Optional<User> userOpt = userRepository.findByClerkId(clerkId);
             if (userOpt.isPresent() && "admin".equals(userOpt.get().getRole())) {
                 bookings = bookingRepository.findAllByOrderByCreatedAtDesc();
+                System.out.println("✓ Admin " + clerkId + " requesting all bookings. Found: " + bookings.size());
             } else {
-                String userId = userOpt.map(User::getId).orElse(null);
-                bookings = userId != null
-                    ? bookingRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                    : List.of();
+                // Return bookings matching either the internal userId or the clerkId string itself
+                String internalId = userOpt.map(User::getId).orElse(null);
+                bookings = bookingRepository.findAllByOrderByCreatedAtDesc().stream()
+                    .filter(b -> (internalId != null && internalId.equals(b.getUserId())) || clerkId.equals(b.getUserId()))
+                    .collect(java.util.stream.Collectors.toList());
+                System.out.println("✓ User " + clerkId + " requesting own bookings. Found: " + bookings.size());
             }
         } else {
             bookings = bookingRepository.findAllByOrderByCreatedAtDesc();
+            System.out.println("✓ No clerkId provided. Returning all bookings. Found: " + bookings.size());
         }
 
         List<Map<String, Object>> result = bookings.stream()
@@ -88,9 +95,52 @@ public class BookingController {
     public ResponseEntity<?> updateBooking(@PathVariable String id,
                                             @RequestBody Map<String, Object> body) {
         return bookingRepository.findById(id).map(booking -> {
-            if (body.containsKey("status")) booking.setStatus((String) body.get("status"));
+            String oldStatus = booking.getStatus();
+            if (body.containsKey("status")) {
+                String newStatus = (String) body.get("status");
+                booking.setStatus(newStatus);
+                
+                // Handle Notifications for status changes
+                if (!newStatus.equals(oldStatus)) {
+                    Notification n = new Notification();
+                    
+                    // Try to find the real clerk ID for this user
+                    String targetUserId = booking.getUserId();
+                    Optional<User> userOpt = userRepository.findById(targetUserId);
+                    if (userOpt.isPresent() && userOpt.get().getClerkId() != null) {
+                        targetUserId = userOpt.get().getClerkId();
+                    }
+                    
+                    n.setUserId(targetUserId);
+                    n.setIsRead(false);
+                    String serviceName = booking.getServiceType() != null ? booking.getServiceType() : "dịch vụ";
+
+                    if ("confirmed".equals(newStatus)) {
+                        n.setTitle("Đặt chỗ đã được xác nhận! ✅");
+                        n.setMessage("Đơn hàng #" + booking.getId() + " cho " + serviceName + " của bạn đã được Admin phê duyệt.");
+                        n.setType("booking_confirmed");
+                        notificationRepository.save(n);
+                    } else if ("completed".equals(newStatus)) {
+                        n.setTitle("Dịch vụ đã hoàn thành! 🌟");
+                        n.setMessage("Đơn hàng #" + booking.getId() + " cho " + serviceName + " của bạn đã hoàn thành. Cảm ơn bạn đã tin dùng Jurni!");
+                        n.setType("booking_completed");
+                        notificationRepository.save(n);
+                    } else if ("cancelled".equals(newStatus)) {
+                        n.setTitle("Đặt chỗ đã bị hủy ❌");
+                        n.setMessage("Rất tiếc, đơn hàng #" + booking.getId() + " của bạn đã bị hủy.");
+                        n.setType("booking_cancelled");
+                        notificationRepository.save(n);
+                    }
+                }
+            }
             return ResponseEntity.ok(bookingRepository.save(booking));
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> patchBooking(@PathVariable String id,
+                                          @RequestBody Map<String, Object> body) {
+        return updateBooking(id, body);
     }
 
     // DELETE /api/bookings/:id (admin only)

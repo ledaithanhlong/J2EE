@@ -46,6 +46,7 @@ public class ActivityController {
             if (body.getImageUrl() != null) act.setImageUrl(body.getImageUrl());
             if (body.getCategory() != null) act.setCategory(body.getCategory());
             if (body.getIncludes() != null) act.setIncludes(body.getIncludes());
+            if (body.getHighlights() != null) act.setHighlights(body.getHighlights());
             if (body.getMeetingPoint() != null) act.setMeetingPoint(body.getMeetingPoint());
             if (body.getPolicies() != null) act.setPolicies(body.getPolicies());
             return ResponseEntity.ok(activityRepository.save(act));

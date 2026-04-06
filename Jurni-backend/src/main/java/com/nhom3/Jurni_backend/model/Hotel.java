@@ -53,6 +53,9 @@ public class Hotel {
     @JsonProperty("public_transport")
     private List<String> publicTransport;
 
+    @JsonProperty("total_rooms")
+    private Integer totalRooms;
+
     // Room types embedded
     @JsonProperty("room_types")
     private List<RoomType> roomTypes;
