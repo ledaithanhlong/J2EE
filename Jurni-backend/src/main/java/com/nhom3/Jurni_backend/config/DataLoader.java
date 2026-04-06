@@ -18,9 +18,13 @@ import com.nhom3.Jurni_backend.repository.ActivityRepository;
 import com.nhom3.Jurni_backend.repository.CarRepository;
 import com.nhom3.Jurni_backend.repository.HotelRepository;
 import com.nhom3.Jurni_backend.repository.VoucherRepository;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class DataLoader {
+
+    @Value("${app.data.seed-on-startup:false}")
+    private boolean seedOnStartup;
 
     @Bean
     CommandLineRunner loadData(
@@ -29,6 +33,12 @@ public class DataLoader {
             VoucherRepository voucherRepo,
             ActivityRepository activityRepo) {
         return args -> {
+            // Check if seeding is enabled
+            if (!seedOnStartup) {
+                System.out.println("⏭️  Auto-seeding is disabled (app.data.seed-on-startup=false)");
+                return;
+            }
+            
             // Only seed if database is empty
             if (hotelRepo.count() == 0) {
                 System.out.println("🌱 Seeding Hotels...");
