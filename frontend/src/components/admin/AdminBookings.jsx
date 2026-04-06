@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth, useUser } from '@clerk/clerk-react';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -10,27 +10,40 @@ const formatCurrency = (value = 0) => {
 
 export default function AdminBookings() {
     const { getToken } = useAuth();
+    const { user } = useUser();
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         loadBookings();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [user]);
 
     const loadBookings = async () => {
         try {
             setLoading(true);
             const token = await getToken();
-            if (!token) return;
+            if (!token) {
+                console.error('No auth token available');
+                return;
+            }
 
-            const res = await axios.get(`${API}/bookings`, {
+            // Pass clerkId as query parameter so backend knows this is admin
+            const clerkId = user?.id;
+            const url = clerkId 
+                ? `${API}/bookings?clerkId=${encodeURIComponent(clerkId)}`
+                : `${API}/bookings`;
+
+            const res = await axios.get(url, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setBookings(Array.isArray(res.data) ? res.data : []);
+            
+            const data = res.data || [];
+            console.log('Bookings loaded:', data.length, 'items');
+            setBookings(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error loading bookings:', error);
-            alert('Lỗi khi tải danh sách đặt chỗ');
+            alert('Lỗi khi tải danh sách đặt chỗ: ' + (error.response?.data?.error || error.message));
         } finally {
             setLoading(false);
         }

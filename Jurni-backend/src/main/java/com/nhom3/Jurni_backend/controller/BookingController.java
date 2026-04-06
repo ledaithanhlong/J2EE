@@ -41,20 +41,23 @@ public class BookingController {
             @RequestParam(required = false) String clerkId) {
         List<Booking> bookings;
 
-        if (clerkId != null) {
+        if (clerkId != null && !clerkId.trim().isEmpty()) {
             // Check if admin
             Optional<User> userOpt = userRepository.findByClerkId(clerkId);
             if (userOpt.isPresent() && "admin".equals(userOpt.get().getRole())) {
                 bookings = bookingRepository.findAllByOrderByCreatedAtDesc();
+                System.out.println("✓ Admin " + clerkId + " requesting all bookings. Found: " + bookings.size());
             } else {
                 // Return bookings matching either the internal userId or the clerkId string itself
                 String internalId = userOpt.map(User::getId).orElse(null);
                 bookings = bookingRepository.findAllByOrderByCreatedAtDesc().stream()
                     .filter(b -> (internalId != null && internalId.equals(b.getUserId())) || clerkId.equals(b.getUserId()))
                     .collect(java.util.stream.Collectors.toList());
+                System.out.println("✓ User " + clerkId + " requesting own bookings. Found: " + bookings.size());
             }
         } else {
             bookings = bookingRepository.findAllByOrderByCreatedAtDesc();
+            System.out.println("✓ No clerkId provided. Returning all bookings. Found: " + bookings.size());
         }
 
         List<Map<String, Object>> result = bookings.stream()

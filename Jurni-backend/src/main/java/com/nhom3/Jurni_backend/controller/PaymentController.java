@@ -138,6 +138,7 @@ public class PaymentController {
             List<Booking> createdBookings = new ArrayList<>();
 
             if (!items.isEmpty()) {
+                System.out.println("🔄 Processing " + items.size() + " items for booking...");
                 for (Map<String, Object> item : items) {
                     String itemId = (String) item.get("id");
                     String itemType = (String) item.get("type");
@@ -145,7 +146,10 @@ public class PaymentController {
                     Map<String, Object> details = (Map<String, Object>) item.getOrDefault("details", Map.of());
 
                     String serviceType = detectServiceType(itemType, itemId);
-                    if (serviceType == null) continue;
+                    if (serviceType == null) {
+                        System.out.println("⚠️ Could not detect service type for item: " + itemId + " type: " + itemType);
+                        continue;
+                    }
 
                     String refId = extractRefId(itemId);
 
@@ -165,8 +169,13 @@ public class PaymentController {
                     setServiceDate(booking, details);
                     setServiceRef(booking, serviceType, refId);
 
-                    createdBookings.add(bookingRepository.save(booking));
+                    Booking saved = bookingRepository.save(booking);
+                    createdBookings.add(saved);
+                    System.out.println("✓ Created booking #" + saved.getId() + " for " + serviceType);
                 }
+                System.out.println("✓ Total bookings saved: " + createdBookings.size());
+            } else {
+                System.out.println("⚠️ No items provided in payment request");
             }
 
             return ResponseEntity.status(201).body(Map.of(
