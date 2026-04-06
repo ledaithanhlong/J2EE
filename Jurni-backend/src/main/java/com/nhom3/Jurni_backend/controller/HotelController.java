@@ -103,6 +103,13 @@ public class HotelController {
             // Update roomTypes
             if (body.getRoomTypes() != null) {
                 hotel.setRoomTypes(body.getRoomTypes());
+                // Tự động cập nhật lại giá thấp nhất khi sửa loại phòng
+                double minPrice = body.getRoomTypes().stream()
+                    .filter(rt -> rt.getPrice() != null && rt.getPrice() > 0)
+                    .mapToDouble(Hotel.RoomType::getPrice)
+                    .min()
+                    .orElse(hotel.getPrice() != null ? hotel.getPrice() : 0);
+                hotel.setPrice(minPrice);
             }
 
             return ResponseEntity.ok(hotelRepository.save(hotel));
