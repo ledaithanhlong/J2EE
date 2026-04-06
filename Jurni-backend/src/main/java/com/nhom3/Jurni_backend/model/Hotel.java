@@ -1,16 +1,18 @@
 package com.nhom3.Jurni_backend.model;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.mapping.Document;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
@@ -24,36 +26,40 @@ public class Hotel {
     private String name;
     private String location;
     private String address;
-    private Double price = 0.0;
+    private Double price;
+
+    @JsonProperty("star_rating")
     private Double starRating;
+
     private String description;
+
+    @JsonProperty("image_url")
     private String imageUrl;
+
     private List<String> images;
-    private String checkInTime = "14:00";
-    private String checkOutTime = "12:00";
-    private Integer totalFloors;
+
+    @JsonProperty("check_in_time")
+    private String checkInTime;
+
+    @JsonProperty("check_out_time")
+    private String checkOutTime;
 
     private List<String> amenities;
     private Map<String, Object> policies;
-    private List<Map<String, Object>> nearbyAttractions;
-    private List<Map<String, Object>> publicTransport;
 
-    // Room types embedded (thay cho bảng Rooms riêng)
+    @JsonProperty("nearby_attractions")
+    private List<String> nearbyAttractions;
+
+    @JsonProperty("public_transport")
+    private List<String> publicTransport;
+
+    // Room types embedded
+    @JsonProperty("room_types")
     private List<RoomType> roomTypes;
 
-    private Boolean hasBreakfast = false;
-    private Boolean hasParking = false;
-    private Boolean hasWifi = true;
-    private Boolean hasPool = false;
-    private Boolean hasRestaurant = false;
-    private Boolean hasGym = false;
-    private Boolean hasSpa = false;
-    private Boolean allowsPets = false;
-    private Boolean isSmokingAllowed = false;
-
     private String status = "pending"; // "pending" | "approved" | "rejected"
-    private String approvedBy;
-    private Instant approvedAt;
+
+    @JsonProperty("approval_note")
     private String approvalNote;
 
     @CreatedDate
@@ -70,5 +76,6 @@ public class Hotel {
         private Integer quantity;
         private Double price;
         private Integer capacity;
+        private List<String> images;
     }
 }

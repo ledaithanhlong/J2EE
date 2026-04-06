@@ -42,7 +42,7 @@ export function HotelCard({ hotel }) {
                         </div>
                         <div className="text-xs text-gray-600">
                             <IconBed className="w-4 h-4 inline mr-1" />
-                            {hotel.rooms || 'N/A'} phòng
+                            {hotel.total_rooms || 'N/A'} phòng
                         </div>
                     </div>
                     {hotel.amenities && hotel.amenities.length > 0 && (

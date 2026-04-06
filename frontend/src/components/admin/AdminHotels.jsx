@@ -73,22 +73,11 @@ const emptyForm = {
   images: [],
   check_in_time: '14:00',
   check_out_time: '12:00',
-  total_rooms: '',
-  total_floors: '',
-  room_types: [], // [{ type: 'standard', quantity: 10, price: 1000000, capacity: 2 }]
+  room_types: [],
   amenities: [],
   policies: defaultPolicies,
   nearby_attractions: [],
   public_transport: [],
-  has_breakfast: false,
-  has_parking: false,
-  has_wifi: true,
-  has_pool: false,
-  has_restaurant: false,
-  has_gym: false,
-  has_spa: false,
-  allows_pets: false,
-  is_smoking_allowed: false,
   approval_note: '',
   status: 'pending'
 };
@@ -220,34 +209,23 @@ export default function AdminHotels() {
   const resetForm = () => setForm(emptyForm);
 
   const normalizeHotelToForm = (hotel) => ({
-    name: hotel.name || '',
-    location: hotel.location || '',
-    address: hotel.address || '',
-    price: hotel.price || '',
-    star_rating: hotel.star_rating || '',
-    description: hotel.description || '',
-    image_url: hotel.image_url || '',
+    name: hotel.name ?? '',
+    location: hotel.location ?? '',
+    address: hotel.address ?? '',
+    price: hotel.price ?? '',
+    star_rating: hotel.star_rating ?? '',
+    description: hotel.description ?? '',
+    image_url: hotel.image_url ?? '',
     images: Array.isArray(hotel.images) ? hotel.images : (hotel.image_url ? [hotel.image_url] : []),
-    check_in_time: hotel.check_in_time || '14:00',
-    check_out_time: hotel.check_out_time || '12:00',
-    total_rooms: hotel.total_rooms || '',
-    total_floors: hotel.total_floors || '',
+    check_in_time: hotel.check_in_time ?? '14:00',
+    check_out_time: hotel.check_out_time ?? '12:00',
     room_types: Array.isArray(hotel.room_types) ? hotel.room_types : [],
     amenities: Array.isArray(hotel.amenities) ? hotel.amenities : [],
-    policies: hotel.policies || defaultPolicies,
+    policies: hotel.policies ?? defaultPolicies,
     nearby_attractions: Array.isArray(hotel.nearby_attractions) ? hotel.nearby_attractions : [],
     public_transport: Array.isArray(hotel.public_transport) ? hotel.public_transport : [],
-    has_breakfast: Boolean(hotel.has_breakfast),
-    has_parking: Boolean(hotel.has_parking),
-    has_wifi: hotel.has_wifi !== undefined ? hotel.has_wifi : true,
-    has_pool: Boolean(hotel.has_pool),
-    has_restaurant: Boolean(hotel.has_restaurant),
-    has_gym: Boolean(hotel.has_gym),
-    has_spa: Boolean(hotel.has_spa),
-    allows_pets: Boolean(hotel.allows_pets),
-    is_smoking_allowed: Boolean(hotel.is_smoking_allowed),
-    approval_note: hotel.approval_note || '',
-    status: hotel.status || 'pending'
+    approval_note: hotel.approval_note ?? '',
+    status: hotel.status ?? 'pending'
   });
 
   const addAmenity = () => {
@@ -316,9 +294,17 @@ export default function AdminHotels() {
   const updateRoomType = (index, field, value) => {
     setForm((prev) => {
       const updated = { ...prev };
+      // Validação special para quantity - garantir que seja sempre >= 1
+      if (field === 'quantity') {
+        const numValue = Number(value);
+        value = isNaN(numValue) || numValue < 1 ? 1 : numValue;
+      }
       updated.room_types[index] = { ...updated.room_types[index], [field]: value };
       // Tự động tính lại total_rooms
-      updated.total_rooms = updated.room_types.reduce((sum, rt) => sum + rt.quantity, 0);
+      updated.total_rooms = updated.room_types.reduce((sum, rt) => {
+        const qty = rt.quantity || 0;
+        return sum + (isNaN(qty) ? 0 : qty);
+      }, 0);
       return updated;
     });
   };
@@ -327,23 +313,25 @@ export default function AdminHotels() {
     e.preventDefault();
     try {
       const token = await getToken();
-      // Tự động tính total_rooms từ room_types
-      const calculatedTotalRooms = form.room_types.length > 0
-        ? form.room_types.reduce((sum, rt) => sum + rt.quantity, 0)
-        : (form.total_rooms ? Number(form.total_rooms) : null);
 
       const data = {
-        ...form,
-        price: form.price ? Number(form.price) : (form.room_types.length > 0 ? '' : 0), // Để trống nếu có room_types để backend tính tự động
+        name: form.name,
+        location: form.location,
+        address: form.address,
+        price: form.price ? Number(form.price) : null,
         star_rating: form.star_rating ? Number(form.star_rating) : null,
-        total_rooms: calculatedTotalRooms,
-        total_floors: form.total_floors ? Number(form.total_floors) : null,
+        description: form.description,
+        image_url: form.image_url,
+        images: form.images.length > 0 ? form.images : null,
+        check_in_time: form.check_in_time,
+        check_out_time: form.check_out_time,
         room_types: form.room_types.length > 0 ? form.room_types : null,
         amenities: form.amenities.length > 0 ? form.amenities : null,
         policies: Object.values(form.policies).some((v) => v) ? form.policies : null,
         nearby_attractions: form.nearby_attractions.length > 0 ? form.nearby_attractions : null,
         public_transport: form.public_transport.length > 0 ? form.public_transport : null,
-        images: form.images.length > 0 ? form.images : null
+        approval_note: form.approval_note || null,
+        status: form.status
       };
 
       if (editing) {
@@ -559,6 +547,18 @@ export default function AdminHotels() {
                 </div>
 
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Giá mỗi đêm (VND)</label>
+                  <input
+                    type="number"
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: e.target.value })}
+                    className="w-full border rounded px-3 py-2"
+                    min="0"
+                    placeholder="Ví dụ: 1500000"
+                  />
+                </div>
+
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Hạng sao (1-5)</label>
                   <input
                     type="number"
@@ -569,16 +569,6 @@ export default function AdminHotels() {
                     max="5"
                     step="0.5"
                     placeholder="Ví dụ: 3.5"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Số tầng</label>
-                  <input
-                    type="number"
-                    value={form.total_floors}
-                    onChange={(e) => setForm({ ...form, total_floors: e.target.value })}
-                    className="w-full border rounded px-3 py-2"
                   />
                 </div>
                 <div>
@@ -758,6 +748,15 @@ export default function AdminHotels() {
                     </div>
                   ))}
                 </div>
+
+                {/* Total rooms summary */}
+                {form.room_types.length > 0 && (
+                  <div className="mb-4 p-3 bg-blue-100 border border-blue-300 rounded-lg">
+                    <p className="text-sm font-semibold text-blue-900">
+                      Tổng số phòng: <span className="text-lg text-blue-600">{form.total_rooms || 0}</span> phòng
+                    </p>
+                  </div>
+                )}
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <h5 className="font-medium text-sm mb-3">Thêm loại phòng mới</h5>
                   <div className="grid grid-cols-4 gap-3 mb-3">
@@ -777,29 +776,16 @@ export default function AdminHotels() {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Số lượng</label>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setNewRoomType({ ...newRoomType, quantity: Math.max(1, newRoomType.quantity - 1) })}
-                          className="flex-1 border rounded px-1 py-1 text-sm hover:bg-gray-200 font-bold"
-                        >
-                          −
-                        </button>
-                        <input
-                          type="number"
-                          value={newRoomType.quantity}
-                          onChange={(e) => setNewRoomType({ ...newRoomType, quantity: Math.max(1, Number(e.target.value) || 1) })}
-                          className="flex-1 border rounded px-2 py-1 text-sm text-center"
-                          min="1"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setNewRoomType({ ...newRoomType, quantity: newRoomType.quantity + 1 })}
-                          className="flex-1 border rounded px-1 py-1 text-sm hover:bg-gray-200 font-bold"
-                        >
-                          +
-                        </button>
-                      </div>
+                      <input
+                        type="number"
+                        value={newRoomType.quantity}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setNewRoomType({ ...newRoomType, quantity: isNaN(val) || val < 1 ? 1 : val });
+                        }}
+                        className="w-full border rounded px-2 py-1 text-sm"
+                        min="1"
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Giá/đêm (VNĐ)</label>
@@ -865,79 +851,14 @@ export default function AdminHotels() {
               {/* Tiện nghi */}
               <div className="border-t pt-4">
                 <h4 className="font-semibold mb-3">Tiện nghi</h4>
-                <div className="grid grid-cols-3 gap-3 mb-3">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={form.has_wifi}
-                      onChange={(e) => setForm({ ...form, has_wifi: e.target.checked })}
-                      className="mr-2"
-                    />
-                    WiFi miễn phí
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={form.has_parking}
-                      onChange={(e) => setForm({ ...form, has_parking: e.target.checked })}
-                      className="mr-2"
-                    />
-                    Chỗ đậu xe
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={form.has_pool}
-                      onChange={(e) => setForm({ ...form, has_pool: e.target.checked })}
-                      className="mr-2"
-                    />
-                    Bể bơi
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={form.has_restaurant}
-                      onChange={(e) => setForm({ ...form, has_restaurant: e.target.checked })}
-                      className="mr-2"
-                    />
-                    Nhà hàng
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={form.has_gym}
-                      onChange={(e) => setForm({ ...form, has_gym: e.target.checked })}
-                      className="mr-2"
-                    />
-                    Phòng gym
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={form.has_spa}
-                      onChange={(e) => setForm({ ...form, has_spa: e.target.checked })}
-                      className="mr-2"
-                    />
-                    Spa
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={form.has_breakfast}
-                      onChange={(e) => setForm({ ...form, has_breakfast: e.target.checked })}
-                      className="mr-2"
-                    />
-                    Bữa sáng
-                  </label>
-                </div>
-                <div className="flex gap-2 mb-2">
+                <div className="flex gap-2 mb-3">
                   <input
                     type="text"
                     value={newAmenity}
                     onChange={(e) => setNewAmenity(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAmenity())}
                     className="flex-1 border rounded px-3 py-2"
-                    placeholder="Thêm tiện nghi khác..."
+                    placeholder="Ví dụ: WiFi miễn phí, Bể bơi, Gym..."
                   />
                   <button type="button" onClick={addAmenity} className="bg-blue-500 text-white px-4 py-2 rounded">
                     Thêm
@@ -1005,26 +926,6 @@ export default function AdminHotels() {
                       placeholder="Ví dụ: Không hút thuốc"
                     />
                   </div>
-                </div>
-                <div className="mt-3 flex gap-4">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={form.allows_pets}
-                      onChange={(e) => setForm({ ...form, allows_pets: e.target.checked })}
-                      className="mr-2"
-                    />
-                    Cho phép thú cưng
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={form.is_smoking_allowed}
-                      onChange={(e) => setForm({ ...form, is_smoking_allowed: e.target.checked })}
-                      className="mr-2"
-                    />
-                    Cho phép hút thuốc
-                  </label>
                 </div>
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ghi chú duyệt</label>

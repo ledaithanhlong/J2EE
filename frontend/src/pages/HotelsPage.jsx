@@ -361,7 +361,7 @@ export default function HotelsPage() {
                         </div>
                         <div className="text-sm text-gray-600">
                           <IconBed className="w-5 h-5 inline mr-1" />
-                          {hotel.rooms || 'N/A'} phòng
+                          {hotel.total_rooms || 'N/A'} phòng
                         </div>
                       </div>
                       {hotel.amenities && hotel.amenities.length > 0 && (
@@ -466,7 +466,7 @@ export default function HotelsPage() {
                 <div className="bg-blue-50 rounded-xl p-6">
                   <h4 className="font-bold text-gray-900 mb-2">Thông tin phòng</h4>
                   <div className="text-gray-700">
-                    <div>Tổng số phòng: {selectedHotel.rooms || 'N/A'}</div>
+                    <div>Tổng số phòng: {selectedHotel.total_rooms || 'N/A'}</div>
                   </div>
                 </div>
               </div>

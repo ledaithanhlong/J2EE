@@ -61,12 +61,10 @@ public class HotelController {
     @PostMapping
     public ResponseEntity<?> createHotel(@RequestBody Hotel hotel) {
         hotel.setStatus("pending");
-        hotel.setApprovedBy(null);
-        hotel.setApprovedAt(null);
         hotel.setApprovalNote(null);
 
-        // Tính giá thấp nhất từ roomTypes
-        if (hotel.getRoomTypes() != null && !hotel.getRoomTypes().isEmpty()) {
+        // Tính giá thấp nhất từ roomTypes nếu không có price
+        if ((hotel.getPrice() == null || hotel.getPrice() == 0) && hotel.getRoomTypes() != null && !hotel.getRoomTypes().isEmpty()) {
             double minPrice = hotel.getRoomTypes().stream()
                 .filter(rt -> rt.getPrice() != null && rt.getPrice() > 0)
                 .mapToDouble(Hotel.RoomType::getPrice)
@@ -81,13 +79,14 @@ public class HotelController {
 
     // PUT /api/hotels/:id
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateHotel(@PathVariable String id, @RequestBody Hotel body,
-                                          @RequestParam(required = false) String approverUserId) {
+    public ResponseEntity<?> updateHotel(@PathVariable String id, @RequestBody Hotel body) {
         return hotelRepository.findById(id).map(hotel -> {
             // Update fields
             if (body.getName() != null) hotel.setName(body.getName());
             if (body.getLocation() != null) hotel.setLocation(body.getLocation());
             if (body.getAddress() != null) hotel.setAddress(body.getAddress());
+            if (body.getPrice() != null) hotel.setPrice(body.getPrice());
+            if (body.getStarRating() != null) hotel.setStarRating(body.getStarRating());
             if (body.getDescription() != null) hotel.setDescription(body.getDescription());
             if (body.getImageUrl() != null) hotel.setImageUrl(body.getImageUrl());
             if (body.getImages() != null) hotel.setImages(body.getImages());
@@ -97,48 +96,15 @@ public class HotelController {
             if (body.getPolicies() != null) hotel.setPolicies(body.getPolicies());
             if (body.getNearbyAttractions() != null) hotel.setNearbyAttractions(body.getNearbyAttractions());
             if (body.getPublicTransport() != null) hotel.setPublicTransport(body.getPublicTransport());
-            if (body.getStarRating() != null) hotel.setStarRating(body.getStarRating());
-            if (body.getHasBreakfast() != null) hotel.setHasBreakfast(body.getHasBreakfast());
-            if (body.getHasParking() != null) hotel.setHasParking(body.getHasParking());
-            if (body.getHasWifi() != null) hotel.setHasWifi(body.getHasWifi());
-            if (body.getHasPool() != null) hotel.setHasPool(body.getHasPool());
-            if (body.getHasRestaurant() != null) hotel.setHasRestaurant(body.getHasRestaurant());
-            if (body.getHasGym() != null) hotel.setHasGym(body.getHasGym());
-            if (body.getHasSpa() != null) hotel.setHasSpa(body.getHasSpa());
-            if (body.getAllowsPets() != null) hotel.setAllowsPets(body.getAllowsPets());
-            if (body.getIsSmokingAllowed() != null) hotel.setIsSmokingAllowed(body.getIsSmokingAllowed());
             if (body.getApprovalNote() != null) hotel.setApprovalNote(body.getApprovalNote());
+            if (body.getStatus() != null) hotel.setStatus(body.getStatus());
 
-            // Update roomTypes & recalc price
+            // Update roomTypes
             if (body.getRoomTypes() != null) {
                 hotel.setRoomTypes(body.getRoomTypes());
-                if (!body.getRoomTypes().isEmpty()) {
-                    double minPrice = body.getRoomTypes().stream()
-                        .filter(rt -> rt.getPrice() != null && rt.getPrice() > 0)
-                        .mapToDouble(Hotel.RoomType::getPrice)
-                        .min().orElse(hotel.getPrice() != null ? hotel.getPrice() : 0);
-                    hotel.setPrice(minPrice);
-                }
             }
 
-            // Status changes
-            if (body.getStatus() != null) {
-                String oldStatus = hotel.getStatus();
-                hotel.setStatus(body.getStatus());
-                if ("approved".equals(body.getStatus()) && !"approved".equals(oldStatus)) {
-                    hotel.setApprovedBy(approverUserId);
-                    hotel.setApprovedAt(Instant.now());
-                } else if ("pending".equals(body.getStatus())) {
-                    hotel.setApprovedBy(null);
-                    hotel.setApprovedAt(null);
-                } else if ("rejected".equals(body.getStatus())) {
-                    hotel.setApprovedBy(approverUserId);
-                    hotel.setApprovedAt(Instant.now());
-                }
-            }
-
-            Hotel saved = hotelRepository.save(hotel);
-            return ResponseEntity.ok(formatHotel(saved));
+            return ResponseEntity.ok(hotelRepository.save(hotel));
         }).orElse(ResponseEntity.notFound().build());
     }
 
@@ -185,35 +151,19 @@ public class HotelController {
         map.put("images", h.getImages() != null ? h.getImages() : List.of());
         map.put("description", h.getDescription());
         map.put("amenities", h.getAmenities() != null ? h.getAmenities() : List.of());
-        map.put("checkIn", h.getCheckInTime() != null ? h.getCheckInTime() : "14:00");
-        map.put("checkOut", h.getCheckOutTime() != null ? h.getCheckOutTime() : "12:00");
         map.put("check_in_time", h.getCheckInTime() != null ? h.getCheckInTime() : "14:00");
         map.put("check_out_time", h.getCheckOutTime() != null ? h.getCheckOutTime() : "12:00");
         map.put("room_types", h.getRoomTypes() != null ? h.getRoomTypes() : List.of());
         int totalRooms = h.getRoomTypes() != null ? h.getRoomTypes().stream()
             .mapToInt(rt -> rt.getQuantity() != null ? rt.getQuantity() : 0).sum() : 0;
-        map.put("rooms", totalRooms);
         map.put("total_rooms", totalRooms);
-        map.put("policies", h.getPolicies() != null ? h.getPolicies() :
-            Map.of("cancel","Miễn phí hủy trước 48 giờ","children","Trẻ em ở miễn phí",
-                   "pets","Không cho phép thú cưng","smoking","Không hút thuốc"));
+        map.put("policies", h.getPolicies() != null ? h.getPolicies() : Map.of());
         map.put("nearby_attractions", h.getNearbyAttractions() != null ? h.getNearbyAttractions() : List.of());
         map.put("public_transport", h.getPublicTransport() != null ? h.getPublicTransport() : List.of());
-        map.put("has_breakfast", h.getHasBreakfast() != null && h.getHasBreakfast());
-        map.put("has_parking", h.getHasParking() != null && h.getHasParking());
-        map.put("has_wifi", h.getHasWifi() == null || h.getHasWifi());
-        map.put("has_pool", h.getHasPool() != null && h.getHasPool());
-        map.put("has_restaurant", h.getHasRestaurant() != null && h.getHasRestaurant());
-        map.put("has_gym", h.getHasGym() != null && h.getHasGym());
-        map.put("has_spa", h.getHasSpa() != null && h.getHasSpa());
-        map.put("allows_pets", h.getAllowsPets() != null && h.getAllowsPets());
-        map.put("is_smoking_allowed", h.getIsSmokingAllowed() != null && h.getIsSmokingAllowed());
         map.put("status", h.getStatus());
-        map.put("approved_by", h.getApprovedBy());
-        map.put("approved_at", h.getApprovedAt());
         map.put("approval_note", h.getApprovalNote());
-        map.put("createdAt", h.getCreatedAt());
-        map.put("updatedAt", h.getUpdatedAt());
+        map.put("created_at", h.getCreatedAt());
+        map.put("updated_at", h.getUpdatedAt());
         return map;
     }
 }
