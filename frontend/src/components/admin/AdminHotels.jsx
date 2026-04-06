@@ -1061,7 +1061,7 @@ export default function AdminHotels() {
                   />
                 </div>
 
-                <div className="space-y-3">
+              <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Giá mỗi đêm</span>
                     <span className="font-semibold text-gray-900">
@@ -1070,10 +1070,39 @@ export default function AdminHotels() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Hạng sao</span>
-                    <span className="font-semibold text-gray-900">
-                      {selectedHotel.star_rating ? `${selectedHotel.star_rating} sao` : 'Chưa xác định'}
+                    <span className="font-semibold text-yellow-600">
+                      {selectedHotel.star_rating ? `★ ${selectedHotel.star_rating}/5` : 'Chưa xác định'}
                     </span>
                   </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Tổng phòng</span>
+                    <span className="font-semibold text-gray-900">{selectedHotel.total_rooms || 0} phòng</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Check-in</span>
+                    <span className="font-semibold text-gray-900">Từ {selectedHotel.check_in_time || '14:00'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Check-out</span>
+                    <span className="font-semibold text-gray-900">Trước {selectedHotel.check_out_time || '12:00'}</span>
+                  </div>
+                  {(selectedHotel.amenities || []).length > 0 && (
+                    <div className="pt-3 border-t border-gray-200">
+                      <p className="text-xs font-semibold text-gray-600 mb-2">TIỆN NGHI</p>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedHotel.amenities.slice(0, 5).map((amenity, idx) => (
+                          <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                            {amenity}
+                          </span>
+                        ))}
+                        {selectedHotel.amenities.length > 5 && (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                            +{selectedHotel.amenities.length - 5}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {selectedHotel.status === 'pending' && (

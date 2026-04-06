@@ -1,175 +1,361 @@
-// Sample hotels data (moved from HotelsPage.jsx)
+// Sample hotels data - Chuẩn hóa theo Backend Model
 export const sampleHotels = [
     {
-        id: 1,
+        id: '1',
         name: 'Khách Sạn Grand Saigon',
-        location: 'Quận 1, TP.HCM',
+        location: 'Thành phố Hồ Chí Minh',
+        address: 'Quận 1, 57-59 Đường Đông Du, TP.HCM',
         price: 2500000,
-        rating: 5,
+        star_rating: 5,
         image_url: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800',
-        description: 'Khách sạn 5 sao sang trọng tại trung tâm thành phố, với view đẹp và dịch vụ đẳng cấp quốc tế',
-        amenities: ['Wifi miễn phí', 'Bể bơi', 'Spa', 'Nhà hàng', 'Fitness center', 'Parking'],
-        rooms: 150,
-        checkIn: '14:00',
-        checkOut: '12:00',
+        images: [
+            'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800',
+            'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800',
+            'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800'
+        ],
+        description: 'Khách sạn 5 sao sang trọng tại trung tâm TP.HCM, với view tuyệt đẹp ra sông Sài Gòn và dịch vụ đẳng cấp quốc tế. Nằm gần các điểm mua sắm, ăn uống và di tích lịch sử.',
+        check_in_time: '14:00',
+        check_out_time: '12:00',
+        room_types: [
+            { type: 'standard', quantity: 40, price: 2500000, capacity: 2, images: [] },
+            { type: 'deluxe', quantity: 50, price: 3200000, capacity: 2, images: [] },
+            { type: 'suite', quantity: 30, price: 4800000, capacity: 4, images: [] },
+            { type: 'family', quantity: 30, price: 5200000, capacity: 6, images: [] }
+        ],
+        amenities: ['WiFi miễn phí', 'Bể bơi', 'Spa & Massage', 'Nhà hàng 24/7', 'Fitness center', 'Valet parking', 'Dịch vụ phòng', 'Quầy tiếp tân 24/7', 'Bar & Lounge', 'Hội nghị'],
         policies: {
-            cancel: 'Miễn phí hủy trước 48 giờ',
-            children: 'Trẻ em dưới 12 tuổi ở miễn phí',
+            cancel: 'Miễn phí hủy trước 48 giờ. Hủy trong 48 giờ: mất 50% tiền đặt.',
+            children: 'Trẻ em dưới 12 tuổi ở miễn phí (1 trẻ/phòng). Giường phụ: 500.000 VND/đêm',
             pets: 'Không cho phép thú cưng',
-            smoking: 'Không hút thuốc'
-        }
+            smoking: 'Không hút thuốc. Phòng hút thuốc có sẵn (phí 300.000 VND/đêm)'
+        },
+        nearby_attractions: [
+            'Nhà thờ Đức Bà - 2 km',
+            'Bến Nhà Rồng - 1.5 km',
+            'Dinh Độc Lập - 3 km',
+            'Bảo tàng Thành phố HCM - 2.5 km',
+            'Khu phố cổ Hội An - 600 m'
+        ],
+        public_transport: [
+            'Trạm xe buýt Nguyễn Huệ - 500 m',
+            'Trạm xe buýt Đông Du - 200 m',
+            'Taxi: Có sẵn 24/7',
+            'Sân bay Tân Sơn Nhất - 7 km (20 phút)'
+        ],
+        total_rooms: 150,
+        status: 'approved'
     },
     {
-        id: 2,
+        id: '2',
         name: 'Resort Đà Lạt Premium',
-        location: 'Đà Lạt, Lâm Đồng',
+        location: 'Tỉnh Lâm Đồng',
+        address: 'Đường Hùng Vương, TP. Đà Lạt, Lâm Đồng',
         price: 1800000,
-        rating: 4,
+        star_rating: 4.5,
         image_url: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800',
-        description: 'Resort nghỉ dưỡng cao cấp với view núi rừng, không gian yên tĩnh và không khí trong lành',
-        amenities: ['Wifi miễn phí', 'Bể bơi', 'Spa', 'Nhà hàng', 'Golf', 'Parking'],
-        rooms: 80,
-        checkIn: '15:00',
-        checkOut: '11:00',
+        images: [
+            'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800',
+            'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800'
+        ],
+        description: 'Resort nghỉ dưỡng cao cấp với view núi rừng, không gian yên tĩnh và không khí trong lành. Thiết kế độc đáo theo kiến trúc truyền thống, hòa hợp với thiên nhiên.',
+        check_in_time: '15:00',
+        check_out_time: '11:00',
+        room_types: [
+            { type: 'standard', quantity: 25, price: 1800000, capacity: 2, images: [] },
+            { type: 'deluxe', quantity: 30, price: 2300000, capacity: 2, images: [] },
+            { type: 'suite', quantity: 15, price: 3500000, capacity: 4, images: [] },
+            { type: 'family', quantity: 10, price: 4200000, capacity: 6, images: [] }
+        ],
+        amenities: ['WiFi miễn phí', 'Bể bơi ngoài trời', 'Spa & Massage', 'Nhà hàng', 'Sân golf', 'Lò sưởi', 'Phòng tự phục vụ'],
         policies: {
-            cancel: 'Miễn phí hủy trước 72 giờ',
+            cancel: 'Miễn phí hủy trước 72 giờ. Hủy trong 72 giờ: mất 30% tiền đặt.',
             children: 'Trẻ em dưới 10 tuổi ở miễn phí',
             pets: 'Cho phép thú cưng (phí 200.000 VND/đêm)',
-            smoking: 'Có khu vực hút thuốc'
-        }
+            smoking: 'Có khu vực hút thuốc riêng'
+        },
+        nearby_attractions: [
+            'Chợ Đà Lạt - 1 km',
+            'Hồ Xuân Hương - 1.5 km',
+            'Thác Datanla - 5 km',
+            'Vườn hoa Này - 3 km',
+            'Làng Cổ Đà Lạt - 2 km'
+        ],
+        public_transport: [
+            'Trạm xe Đà Lạt - 2 km',
+            'Taxi/Grab - sẵn có',
+            'Thuê xe máy - có tại resort'
+        ],
+        total_rooms: 80,
+        status: 'approved'
     },
     {
-        id: 3,
+        id: '3',
         name: 'Boutique Hotel Hội An',
-        location: 'Hội An, Quảng Nam',
+        location: 'Tỉnh Quảng Nam',
+        address: 'Phố cổ Hội An, Quảng Nam',
         price: 1200000,
-        rating: 4,
+        star_rating: 4,
         image_url: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800',
-        description: 'Khách sạn boutique nhỏ xinh với kiến trúc cổ điển, gần phố cổ Hội An',
-        amenities: ['Wifi miễn phí', 'Nhà hàng', 'Xe đạp miễn phí', 'Tour booking'],
-        rooms: 25,
-        checkIn: '14:00',
-        checkOut: '12:00',
+        images: ['https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800'],
+        description: 'Khách sạn boutique nhỏ xinh với kiến trúc cổ điển, được trang trí theo phong cách truyền thống Hội An. Gần phố cổ và sông Thu Bồn.',
+        check_in_time: '14:00',
+        check_out_time: '12:00',
+        room_types: [
+            { type: 'standard', quantity: 10, price: 1200000, capacity: 2, images: [] },
+            { type: 'deluxe', quantity: 10, price: 1600000, capacity: 2, images: [] },
+            { type: 'suite', quantity: 5, price: 2300000, capacity: 4, images: [] }
+        ],
+        amenities: ['WiFi miễn phí', 'Nhà hàng', 'Xe đạp miễn phí', 'Tour booking', 'Dịch vụ giặt'],
         policies: {
             cancel: 'Miễn phí hủy trước 24 giờ',
             children: 'Trẻ em dưới 6 tuổi ở miễn phí',
             pets: 'Không cho phép thú cưng',
             smoking: 'Không hút thuốc'
-        }
+        },
+        nearby_attractions: [
+            'Phố cổ Hội An - 50 m',
+            'Chùa Cầu - 100 m',
+            'Nhà cổ Tấn Ký - 200 m',
+            'Bãi biển Hội An - 3 km',
+            'Kho Cảng Hội An - 500 m'
+        ],
+        public_transport: [
+            'Bến xe Hội An - 1 km',
+            'Nhà ga tàu Danang - 30 km'
+        ],
+        total_rooms: 25,
+        status: 'approved'
     },
     {
-        id: 4,
+        id: '4',
         name: 'Beach Resort Nha Trang',
-        location: 'Nha Trang, Khánh Hòa',
+        location: 'Tỉnh Khánh Hòa',
+        address: '22 Trần Phú, Nha Trang, Khánh Hòa',
         price: 2200000,
-        rating: 5,
+        star_rating: 5,
         image_url: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800',
-        description: 'Resort bãi biển 5 sao với bãi biển riêng, view biển tuyệt đẹp và nhiều hoạt động giải trí',
-        amenities: ['Wifi miễn phí', 'Bể bơi', 'Bãi biển riêng', 'Spa', 'Nhà hàng', 'Bar', 'Fitness center'],
-        rooms: 200,
-        checkIn: '15:00',
-        checkOut: '12:00',
+        images: ['https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800'],
+        description: 'Resort bãi biển 5 sao với bãi biển riêng, view biển tuyệt đẹp, hồ bơi vô cực và nhiều hoạt động giải trí nước.',
+        check_in_time: '15:00',
+        check_out_time: '12:00',
+        room_types: [
+            { type: 'standard', quantity: 60, price: 2200000, capacity: 2, images: [] },
+            { type: 'deluxe', quantity: 80, price: 2800000, capacity: 2, images: [] },
+            { type: 'suite', quantity: 40, price: 4500000, capacity: 4, images: [] },
+            { type: 'family', quantity: 20, price: 5000000, capacity: 6, images: [] }
+        ],
+        amenities: ['WiFi miễn phí', 'Bể bơi vô cực', 'Bãi biển riêng', 'Spa & Massage', 'Nhà hàng', 'Bar', 'Fitness center', 'Dive center', 'Water sports'],
         policies: {
             cancel: 'Miễn phí hủy trước 48 giờ',
             children: 'Trẻ em dưới 12 tuổi ở miễn phí',
             pets: 'Không cho phép thú cưng',
-            smoking: 'Có khu vực hút thuốc'
-        }
+            smoking: 'Khu vực hút thuốc có sẵn'
+        },
+        nearby_attractions: [
+            'Biển Nha Trang - bãi biển chính',
+            'Tháp Bà Ponagar - 3 km',
+            'Quảng trường 23 Tháng 10 - 1 km',
+            'Đảo Mấu & Honai - 10 km'
+        ],
+        public_transport: [
+            'Sân bay Cam Ranh - 40 km',
+            'Trạm xe Nha Trang - 1 km'
+        ],
+        total_rooms: 200,
+        status: 'approved'
     },
     {
-        id: 5,
+        id: '5',
         name: 'City Hotel Hà Nội',
-        location: 'Hoàn Kiếm, Hà Nội',
+        location: 'Thành phố Hà Nội',
+        address: 'Phố Hoàn Kiếm, Hà Nội',
         price: 1500000,
-        rating: 4,
+        star_rating: 4,
         image_url: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800',
-        description: 'Khách sạn 4 sao hiện đại tại trung tâm Hà Nội, gần các điểm tham quan nổi tiếng',
-        amenities: ['Wifi miễn phí', 'Nhà hàng', 'Fitness center', 'Parking', 'Business center'],
-        rooms: 100,
-        checkIn: '14:00',
-        checkOut: '12:00',
+        images: ['https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800'],
+        description: 'Khách sạn 4 sao hiện đại tại trung tâm Hà Nội, gần hồ Hoàn Kiếm và các điểm tham quan lịch sử nổi tiếng.',
+        check_in_time: '14:00',
+        check_out_time: '12:00',
+        room_types: [
+            { type: 'standard', quantity: 35, price: 1500000, capacity: 2, images: [] },
+            { type: 'deluxe', quantity: 40, price: 1900000, capacity: 2, images: [] },
+            { type: 'suite', quantity: 15, price: 3000000, capacity: 4, images: [] },
+            { type: 'family', quantity: 10, price: 3500000, capacity: 6, images: [] }
+        ],
+        amenities: ['WiFi miễn phí', 'Nhà hàng', 'Fitness center', 'Parking', 'Business center', 'Dịch vụ phòng 24h'],
         policies: {
             cancel: 'Miễn phí hủy trước 24 giờ',
             children: 'Trẻ em dưới 10 tuổi ở miễn phí',
             pets: 'Không cho phép thú cưng',
             smoking: 'Không hút thuốc'
-        }
+        },
+        nearby_attractions: [
+            'Hồ Hoàn Kiếm - 100 m',
+            'Nhà thờ Lớn Hà Nội - 500 m',
+            'Hàng A - phố cổ - 1 km',
+            'Lăng Bác Hồ - 2 km',
+            'Dinh Thống Nhất - 3 km'
+        ],
+        public_transport: [
+            'Trạm xe buýt Hoàn Kiếm - 200 m',
+            'Sân bay Nội Bài - 25 km '
+        ],
+        total_rooms: 100,
+        status: 'approved'
     },
     {
-        id: 6,
+        id: '6',
         name: 'Mountain Lodge Sapa',
-        location: 'Sapa, Lào Cai',
+        location: 'Tỉnh Lào Cai',
+        address: 'Sapa, Lào Cai',
         price: 1600000,
-        rating: 4,
+        star_rating: 4,
         image_url: 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800',
-        description: 'Lodge nghỉ dưỡng trên núi với view ruộng bậc thang, không gian ấm cúng và ẩm thực địa phương',
-        amenities: ['Wifi miễn phí', 'Lò sưởi', 'Nhà hàng', 'Tour trekking', 'Parking'],
-        rooms: 40,
-        checkIn: '14:00',
-        checkOut: '11:00',
+        images: ['https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800'],
+        description: 'Lodge nghỉ dưỡng trên núi cao với view ruộng bậc thang tuyệt đẹp, không gian ấm cúng và ẩm thực địa phương Tây Bắc.',
+        check_in_time: '14:00',
+        check_out_time: '11:00',
+        room_types: [
+            { type: 'standard', quantity: 15, price: 1600000, capacity: 2, images: [] },
+            { type: 'deluxe', quantity: 15, price: 2200000, capacity: 2, images: [] },
+            { type: 'family', quantity: 10, price: 3200000, capacity: 4, images: [] }
+        ],
+        amenities: ['WiFi miễn phí', 'Lò sưởi', 'Nhà hàng', 'Tour trekking', 'Parking', 'Dịch vụ phòng'],
         policies: {
             cancel: 'Miễn phí hủy trước 48 giờ',
             children: 'Trẻ em dưới 8 tuổi ở miễn phí',
             pets: 'Cho phép thú cưng (phí 150.000 VND/đêm)',
             smoking: 'Có khu vực hút thuốc'
-        }
+        },
+        nearby_attractions: [
+            'Con đường tình yêu - 1 km',
+            'Đỉnh Fansipan - 3 km',
+            'Thác Bạc - 5 km',
+            'Bản Cát Cát - 2 km',
+            'Chợ Sapa - 500 m'
+        ],
+        public_transport: [
+            'Trạm xe Sapa - 1 km',
+            'Sân bay Lào Cai - 40 km'
+        ],
+        total_rooms: 40,
+        status: 'approved'
     },
     {
-        id: 7,
+        id: '7',
         name: 'Luxury Hotel Đà Nẵng',
-        location: 'Sơn Trà, Đà Nẵng',
+        location: 'Thành phố Đà Nẵng',
+        address: 'Sơn Trà, Đà Nẵng',
         price: 2800000,
-        rating: 5,
+        star_rating: 5,
         image_url: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800',
-        description: 'Khách sạn 5 sao sang trọng với view biển, spa cao cấp và dịch vụ đẳng cấp',
-        amenities: ['Wifi miễn phí', 'Bể bơi vô cực', 'Spa', 'Nhà hàng', 'Bar', 'Fitness center', 'Parking'],
-        rooms: 180,
-        checkIn: '15:00',
-        checkOut: '12:00',
+        images: ['https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800'],
+        description: 'Khách sạn 5 sao sang trọng với view biển Mỹ Khê, spa cao cấp, hồ bơi vô cực và dịch vụ đẳng cấp 5 sao.',
+        check_in_time: '15:00',
+        check_out_time: '12:00',
+        room_types: [
+            { type: 'standard', quantity: 50, price: 2800000, capacity: 2, images: [] },
+            { type: 'deluxe', quantity: 60, price: 3600000, capacity: 2, images: [] },
+            { type: 'suite', quantity: 40, price: 5200000, capacity: 4, images: [] },
+            { type: 'family', quantity: 30, price: 6000000, capacity: 6, images: [] }
+        ],
+        amenities: ['WiFi miễn phí', 'Bể bơi vô cực', 'Spa cao cấp', 'Nhà hàng', 'Bar & Lounge', 'Fitness center', 'Parking valet'],
         policies: {
             cancel: 'Miễn phí hủy trước 72 giờ',
             children: 'Trẻ em dưới 12 tuổi ở miễn phí',
             pets: 'Không cho phép thú cưng',
             smoking: 'Không hút thuốc'
-        }
+        },
+        nearby_attractions: [
+            'Bãi biển Mỹ Khê - gần',
+            'Cầu Quay Sơn Trà - 1 km',
+            'Chùa Linh Ứng - 3 km',
+            'Bán đảo Sơn Trà - 2 km',
+            'Phố cổ Hàn - 5 km'
+        ],
+        public_transport: [
+            'Sân bay Đà Nẵng - 3 km',
+            'Trạm xe Đà Nẵng - 5 km'
+        ],
+        total_rooms: 180,
+        status: 'approved'
     },
     {
-        id: 8,
+        id: '8',
         name: 'Eco Lodge Cần Thơ',
-        location: 'Cần Thơ',
+        location: 'Thành phố Cần Thơ',
+        address: 'Quận Ninh Kiều, Cần Thơ',
         price: 900000,
-        rating: 3,
+        star_rating: 3.5,
         image_url: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800',
-        description: 'Lodge sinh thái gần sông, trải nghiệm văn hóa miền Tây và ẩm thực địa phương',
-        amenities: ['Wifi miễn phí', 'Tour sông nước', 'Nhà hàng', 'Xe đạp miễn phí'],
-        rooms: 30,
-        checkIn: '14:00',
-        checkOut: '12:00',
+        images: ['https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800'],
+        description: 'Lodge sinh thái gần sông Hậu, trải nghiệm văn hóa miền Tây Việt Nam, ẩm thực địa phương và khám phá chợ nổi.',
+        check_in_time: '14:00',
+        check_out_time: '12:00',
+        room_types: [
+            { type: 'standard', quantity: 15, price: 900000, capacity: 2, images: [] },
+            { type: 'deluxe', quantity: 10, price: 1300000, capacity: 2, images: [] },
+            { type: 'family', quantity: 5, price: 1800000, capacity: 4, images: [] }
+        ],
+        amenities: ['WiFi miễn phí', 'Tour sông nước', 'Nhà hàng', 'Xe đạp miễn phí', 'Dịch vụ giặt'],
         policies: {
             cancel: 'Miễn phí hủy trước 24 giờ',
             children: 'Trẻ em dưới 8 tuổi ở miễn phí',
             pets: 'Cho phép thú cưng',
             smoking: 'Có khu vực hút thuốc'
-        }
+        },
+        nearby_attractions: [
+            'Chợ nổi Cái Răng - 5 km',
+            'Chùa Ông - 2 km',
+            'Bảo tàng Cần Thơ - 1 km',
+            'Vườn cây - 3 km'
+        ],
+        public_transport: [
+            'Sân bay Cần Thơ - 10 km',
+            'Trạm xe Cần Thơ - 2 km'
+        ],
+        total_rooms: 30,
+        status: 'approved'
     },
     {
-        id: 9,
+        id: '9',
         name: 'Beachfront Hotel Phú Quốc',
-        location: 'Phú Quốc, Kiên Giang',
+        location: 'Tỉnh Kiên Giang',
+        address: 'Phú Quốc, Kiên Giang',
         price: 3200000,
-        rating: 5,
+        star_rating: 5,
         image_url: 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800',
-        description: 'Resort bãi biển 5 sao với villa riêng, bãi biển tuyệt đẹp và nhiều hoạt động giải trí',
-        amenities: ['Wifi miễn phí', 'Bể bơi', 'Bãi biển riêng', 'Spa', 'Nhà hàng', 'Bar', 'Fitness center', 'Diving center'],
-        rooms: 120,
-        checkIn: '15:00',
-        checkOut: '12:00',
+        images: ['https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800'],
+        description: 'Resort bãi biển 5 sao với villa riêng, bãi biển tuyệt đẹp, hồ bơi côi lập và nhiều hoạt động giải trí nước và lặn.',
+        check_in_time: '15:00',
+        check_out_time: '12:00',
+        room_types: [
+            { type: 'standard', quantity: 30, price: 3200000, capacity: 2, images: [] },
+            { type: 'deluxe', quantity: 40, price: 4200000, capacity: 2, images: [] },
+            { type: 'suite', quantity: 25, price: 5500000, capacity: 4, images: [] },
+            { type: 'family', quantity: 25, price: 6500000, capacity: 6, images: [] }
+        ],
+        amenities: ['WiFi miễn phí', 'Bể bơi riêng', 'Bãi biển riêng', 'Spa', 'Nhà hàng', 'Bar', 'Fitness center', 'Dive center', 'Water sports'],
         policies: {
             cancel: 'Miễn phí hủy trước 72 giờ',
             children: 'Trẻ em dưới 12 tuổi ở miễn phí',
             pets: 'Không cho phép thú cưng',
             smoking: 'Không hút thuốc'
-        }
+        },
+        nearby_attractions: [
+            'Bãi Dài Phú Quốc - gần',
+            'Hòn Sao - 2 km',
+            'Chợ Phú Quốc - 5 km',
+            'Vườn tiêu Phú Quốc - 10 km',
+            'Nhà hát nước Mến Mộc - 20 km'
+        ],
+        public_transport: [
+            'Sân bay Phú Quốc - 15 km',
+            'Cảng Phú Quốc - 10 km',
+            'Taxi/Grab - sẵn có'
+        ],
+        total_rooms: 120,
+        status: 'approved'
     }
 ];
 

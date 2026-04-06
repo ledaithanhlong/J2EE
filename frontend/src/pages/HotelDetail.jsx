@@ -192,22 +192,11 @@ export default function HotelDetail() {
   }
   const displayImage = allImages[selectedImageIndex] || hotel.image_url || 'https://via.placeholder.com/800x400';
 
-  // Get amenities list
-  const amenitiesList = [];
-  if (hotel.has_wifi) amenitiesList.push({ name: 'WiFi miễn phí', icon: <IconWifi /> });
-  if (hotel.has_parking) amenitiesList.push({ name: 'Chỗ đậu xe', icon: <IconCar /> });
-  if (hotel.has_pool) amenitiesList.push({ name: 'Bể bơi', icon: <IconSwimming /> });
-  if (hotel.has_restaurant) amenitiesList.push({ name: 'Nhà hàng', icon: null });
-  if (hotel.has_gym) amenitiesList.push({ name: 'Phòng gym', icon: null });
-  if (hotel.has_spa) amenitiesList.push({ name: 'Spa', icon: null });
-  if (hotel.has_breakfast) amenitiesList.push({ name: 'Bữa sáng', icon: null });
-  if (Array.isArray(hotel.amenities)) {
-    hotel.amenities.forEach(amenity => {
-      if (amenity && !amenitiesList.find(a => a.name === amenity)) {
-        amenitiesList.push({ name: amenity, icon: null });
-      }
-    });
-  }
+  // Get amenities list from array
+  const amenitiesList = Array.isArray(hotel.amenities) ? hotel.amenities.map(amenity => ({
+    name: amenity,
+    icon: null
+  })) : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-blue-50/30 to-white py-8">

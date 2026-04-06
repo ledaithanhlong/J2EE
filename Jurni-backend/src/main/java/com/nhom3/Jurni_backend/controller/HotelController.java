@@ -5,7 +5,6 @@ import com.nhom3.Jurni_backend.repository.HotelRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -108,7 +107,7 @@ public class HotelController {
                     .filter(rt -> rt.getPrice() != null && rt.getPrice() > 0)
                     .mapToDouble(Hotel.RoomType::getPrice)
                     .min()
-                    .orElse(hotel.getPrice() != null ? hotel.getPrice() : 0);
+                    .orElseGet(() -> Optional.ofNullable(hotel.getPrice()).orElse(0.0));
                 hotel.setPrice(minPrice);
             }
 
@@ -128,16 +127,14 @@ public class HotelController {
     // Helper: filter and sort
     private List<Hotel> filterAndSort(List<Hotel> hotels, String q, Double minPrice, Double maxPrice, String sort) {
         return hotels.stream()
-            .filter(h -> q == null || (h.getName() != null && h.getName().toLowerCase().contains(q.toLowerCase())))
+           .filter(h -> q == null || (h.getName() != null && h.getName().toLowerCase().contains(q.toLowerCase())))
             .filter(h -> minPrice == null || (h.getPrice() != null && h.getPrice() >= minPrice))
             .filter(h -> maxPrice == null || (h.getPrice() != null && h.getPrice() <= maxPrice))
             .sorted((a, b) -> {
-                if ("price_asc".equals(sort)) return Double.compare(
-                    a.getPrice() != null ? a.getPrice() : 0,
-                    b.getPrice() != null ? b.getPrice() : 0);
-                if ("price_desc".equals(sort)) return Double.compare(
-                    b.getPrice() != null ? b.getPrice() : 0,
-                    a.getPrice() != null ? a.getPrice() : 0);
+                double priceA = Optional.ofNullable(a.getPrice()).orElse(0.0);
+                double priceB = Optional.ofNullable(b.getPrice()).orElse(0.0);
+                if ("price_asc".equals(sort)) return Double.compare(priceA, priceB);
+                if ("price_desc".equals(sort)) return Double.compare(priceB, priceA);
                 // Default: newest first
                 if (b.getCreatedAt() != null && a.getCreatedAt() != null)
                     return b.getCreatedAt().compareTo(a.getCreatedAt());
@@ -153,7 +150,7 @@ public class HotelController {
         map.put("name", h.getName());
         map.put("location", h.getLocation());
         map.put("address", h.getAddress());
-        map.put("price", h.getPrice() != null ? h.getPrice() : 0);
+        map.put("price", Optional.ofNullable(h.getPrice()).orElse(0.0));
         map.put("star_rating", h.getStarRating());
         map.put("image_url", h.getImageUrl());
         map.put("images", h.getImages() != null ? h.getImages() : List.of());
@@ -163,7 +160,7 @@ public class HotelController {
         map.put("check_out_time", h.getCheckOutTime() != null ? h.getCheckOutTime() : "12:00");
         map.put("room_types", h.getRoomTypes() != null ? h.getRoomTypes() : List.of());
         int totalRooms = h.getRoomTypes() != null ? h.getRoomTypes().stream()
-            .mapToInt(rt -> rt.getQuantity() != null ? rt.getQuantity() : 0).sum() : 0;
+            .mapToInt(rt -> Optional.ofNullable(rt.getQuantity()).orElse(0)).sum() : 0;
         map.put("total_rooms", totalRooms);
         map.put("policies", h.getPolicies() != null ? h.getPolicies() : Map.of());
         map.put("nearby_attractions", h.getNearbyAttractions() != null ? h.getNearbyAttractions() : List.of());
