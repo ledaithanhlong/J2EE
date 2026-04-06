@@ -199,10 +199,10 @@ export default function PaymentPage() {
       setCartItems([]);
     }
 
-    // Fetch Vouchers
+    // Fetch Vouchers from backend
     (async () => {
       try {
-        const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const API = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
         const res = await axios.get(`${API}/vouchers`);
         const data = res.data || [];
         if (data.length === 0) {
@@ -259,11 +259,13 @@ export default function PaymentPage() {
 
   const discountAmount = useMemo(() => {
     if (!appliedVoucher) return 0;
+    // Prefer server-calculated discount for accuracy
+    if (appliedVoucher._serverDiscount != null) return appliedVoucher._serverDiscount;
 
     let discount = 0;
-    if (appliedVoucher.discount_percent > 0) {
+    if ((appliedVoucher.discount_percent ?? 0) > 0) {
       discount = subtotal * (appliedVoucher.discount_percent / 100);
-      if (appliedVoucher.max_discount > 0) {
+      if ((appliedVoucher.max_discount ?? 0) > 0) {
         discount = Math.min(discount, appliedVoucher.max_discount);
       }
     } else {
@@ -275,35 +277,32 @@ export default function PaymentPage() {
 
   const total = hasOrder ? Math.max(0, subtotal + methodFee - discountAmount) : 0;
 
-  const handleApplyVoucher = () => {
+  const handleApplyVoucher = async () => {
     setVoucherError('');
     setAppliedVoucher(null);
 
-    if (!voucherCode.trim()) return;
-
-    const voucher = vouchers.find(v => v.code?.toUpperCase() === voucherCode.trim().toUpperCase());
-    if (!voucher) {
-      setVoucherError('Mã giảm giá không hợp lệ');
+    if (!voucherCode.trim()) {
+      setVoucherError('Vui lòng nhập mã giảm giá');
       return;
     }
 
-    const now = new Date();
-    if (new Date(voucher.expiry_date) < now) {
-      setVoucherError('Mã giảm giá đã hết hạn');
-      return;
+    try {
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+      const res = await axios.post(`${API}/vouchers/apply`, {
+        code: voucherCode.trim(),
+        subtotal: subtotal,
+      });
+      if (res.data.success) {
+        // Store both voucher info and server-calculated discount
+        setAppliedVoucher({
+          ...res.data.voucher,
+          _serverDiscount: res.data.discount_amount,
+        });
+      }
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Mã giảm giá không hợp lệ';
+      setVoucherError(msg);
     }
-
-    if (voucher.usage_limit > 0 && voucher.current_usage >= voucher.usage_limit) {
-      setVoucherError('Mã giảm giá đã hết lượt sử dụng');
-      return;
-    }
-
-    if (voucher.min_spend > subtotal) {
-      setVoucherError(`Đơn hàng tối thiểu ${formatCurrency(voucher.min_spend, 'VND')} để áp dụng mã này`);
-      return;
-    }
-
-    setAppliedVoucher(voucher);
   };
 
 
@@ -356,8 +355,9 @@ export default function PaymentPage() {
   const confirmPayment = async () => {
     setSubmitting(true);
     try {
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
       const payload = {
-        amount: total,
+        amount: subtotal, // Send subtotal; backend will apply fee & voucher
         currency: 'VND',
         paymentMethod: form.paymentMethod,
         customer: {
@@ -366,12 +366,12 @@ export default function PaymentPage() {
           phone: form.phone,
         },
         items: selectedItems,
-        book_all_items: true, // Signal to backend to loop items
+        book_all_items: true,
         user_id: user?.id,
+        // Pass voucher code so backend can validate & record usage
+        voucherCode: appliedVoucher ? appliedVoucher.code : undefined,
       };
 
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      // Backend route is /api/payments/checkout (mounted at /payments in index.js, and /checkout in payments.routes.js)
       const res = await axios.post(`${API}/payments/checkout`, payload);
 
       if (res.data.success) {
@@ -382,6 +382,8 @@ export default function PaymentPage() {
         const remainingCart = cartItems.filter(i => !selectedIds.includes(i.id));
         setCartItems(remainingCart);
         setSelectedIds([]);
+        setAppliedVoucher(null);
+        setVoucherCode('');
         localStorage.setItem('pendingCart', JSON.stringify(remainingCart));
 
         setTimeout(() => {

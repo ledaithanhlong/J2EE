@@ -26,6 +26,8 @@ public class Voucher {
     @Indexed(unique = true)
     private String code;
 
+    private String description;
+
     @JsonProperty("discount_percent")
     private Integer discountPercent;
 
@@ -50,9 +52,14 @@ public class Voucher {
     @JsonProperty("current_usage")
     private Integer currentUsage = 0;
 
+    @JsonProperty("is_active")
+    private Boolean isActive = true;
+
     @CreatedDate
+    @JsonProperty("created_at")
     private Instant createdAt;
 
     @LastModifiedDate
+    @JsonProperty("updated_at")
     private Instant updatedAt;
 }
