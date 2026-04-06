@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
-import { SignedIn, SignedOut, UserButton, useUser, useAuth } from '@clerk/clerk-react';
+import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';import {
+  SignedIn,
+  SignedOut,
+  UserButton,
+  useUser,
+  useAuth,
+  AuthenticateWithRedirectCallback
+} from '@clerk/clerk-react';
 import axios from 'axios';
 import HomePage from '../pages/HomePage.jsx';
 import HotelsPage from '../pages/HotelsPage.jsx';
@@ -248,6 +254,7 @@ export default function App({ clerkEnabled }) {
           <Route path="/team" element={<TeamPage />} />
           <Route path="/support" element={<SupportPage />} />
           <Route path="/terms" element={<TermsPage />} />
+          <Route path="/sso-callback"element={clerkEnabled ? (<AuthenticateWithRedirectCallback />) : (<Navigate to="/" replace />)}/>
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/careers" element={<CareersPage />} />
           <Route path="/price-alerts" element={<div className="max-w-7xl mx-auto px-4 py-6"><PriceAlertPage /></div>} />
@@ -257,7 +264,7 @@ export default function App({ clerkEnabled }) {
         </Routes>
 
       </main>
-      <ChatWidget />
+      {clerkEnabled && <ChatWidget />}
       <footer className="text-white" style={{ backgroundColor: '#0D47A1' }}>
         <div className="max-w-7xl mx-auto px-4 py-8 grid gap-8 md:grid-cols-3">
           <div>
