@@ -114,7 +114,6 @@ export default function JurniHero() {
 
   const calculateEstimatedPrice = () => {
     if (service === 'flights' && search.from && search.to) {
-      // Tìm giá từ popularDestinations nếu có route khớp
       const matchedRoute = popularDestinations.flights.find(
         dest => dest.from === search.from && dest.to === search.to
       );
@@ -124,7 +123,6 @@ export default function JurniHero() {
       const price = Math.round(basePrice * classMultiplier[search.class] * passengerCount);
       setEstimatedPrice(price);
     } else if (service === 'hotels' && search.from && search.date && search.time) {
-      // Tìm giá từ popularDestinations nếu có location khớp
       const matchedLocation = popularDestinations.hotels.find(
         dest => dest.location === search.from
       );
@@ -134,7 +132,6 @@ export default function JurniHero() {
       const price = Math.round(basePricePerNight * roomTypeMultiplier[search.roomType] * nights * search.rooms);
       setEstimatedPrice(price);
     } else if (service === 'cars' && search.pickupLocation && search.date && search.time) {
-      // Tìm giá từ popularDestinations nếu có location khớp
       const matchedLocation = popularDestinations.cars.find(
         dest => dest.location === search.pickupLocation
       );
@@ -144,7 +141,6 @@ export default function JurniHero() {
       const price = Math.round(basePricePerDay * carTypeMultiplier[search.carType] * days);
       setEstimatedPrice(price);
     } else if (service === 'activities' && search.from) {
-      // Tìm giá từ popularDestinations nếu có location khớp
       const matchedActivity = popularDestinations.activities.find(
         dest => dest.location === search.from
       );
@@ -224,8 +220,12 @@ export default function JurniHero() {
   };
 
   const handleSearch = () => {
-    if (service === 'hotels') navigate('/hotels');
-    else if (service === 'flights') {
+    if (service === 'hotels') {
+      navigate('/hotels');
+      return;
+    }
+
+    if (service === 'flights') {
       navigate('/flights', {
         state: {
           from: search.from,
@@ -233,8 +233,122 @@ export default function JurniHero() {
           date: search.date
         }
       });
-    } else if (service === 'cars') navigate('/cars');
-    else if (service === 'activities') navigate('/activities');
+      return;
+    }
+
+    if (service === 'cars') {
+      const params = new URLSearchParams();
+
+      if (search.pickupLocation.trim()) {
+        params.set('pickupLocation', search.pickupLocation.trim());
+      }
+
+      if (search.returnLocation.trim()) {
+        params.set('dropoffLocation', search.returnLocation.trim());
+      }
+
+      if (search.date) {
+        params.set('pickupDate', search.date);
+      }
+
+      if (search.pickupTime) {
+        params.set('pickupTime', search.pickupTime);
+      }
+
+      if (search.time) {
+        params.set('returnDate', search.time);
+      }
+
+      if (search.returnTime) {
+        params.set('returnTime', search.returnTime);
+      }
+
+      if (search.insurance) {
+        params.set('insurance', '1');
+      }
+
+      const carTypeMap = {
+        economy: '',
+        compact: '',
+        suv: '7-cho',
+        luxury: '',
+        pickup: ''
+      };
+
+      const mappedCarType = carTypeMap[search.carType] ?? '';
+      if (mappedCarType) {
+        params.set('carType', mappedCarType);
+      }
+
+      navigate(`/cars?${params.toString()}`);
+      return;
+    }
+
+    if (service === 'activities') {
+      const params = new URLSearchParams();
+
+      if (search.from.trim()) {
+        params.set('location', search.from.trim());
+      }
+
+      if (search.date) {
+        params.set('date', search.date);
+      }
+
+      const categoryMap = {
+        all: '',
+        adventure: 'Thể thao',
+        culture: 'Văn hóa',
+        nature: 'Thiên nhiên',
+        entertainment: 'Giải trí',
+        sports: 'Thể thao'
+      };
+
+      const durationMap = {
+        all: '',
+        'half-day': 'halfday',
+        'full-day': 'fullday',
+        'multi-day': 'fullday'
+      };
+
+      const priceMap = {
+        all: '',
+        budget: 'low',
+        mid: 'medium',
+        high: 'high',
+        premium: 'high'
+      };
+
+      const mappedCategory = categoryMap[search.activityType] ?? '';
+      const mappedDuration = durationMap[search.duration] ?? '';
+      const mappedPrice = priceMap[search.priceRangeActivity] ?? '';
+
+      const totalPeople =
+        Number(search.participants.adults || 0) +
+        Number(search.participants.children || 0);
+
+      if (mappedCategory) {
+        params.set('category', mappedCategory);
+      }
+
+      if (totalPeople > 0) {
+        params.set('people', String(totalPeople));
+      }
+
+      if (mappedDuration) {
+        params.set('duration', mappedDuration);
+      }
+
+      if (mappedPrice) {
+        params.set('priceRange', mappedPrice);
+      }
+
+      if (search.minRatingActivity !== 'all') {
+        params.set('minRating', search.minRatingActivity);
+      }
+
+      navigate(`/activities?${params.toString()}`);
+    }
   };
 
   const updatePassengers = (type, delta) => {
@@ -1050,4 +1164,3 @@ export default function JurniHero() {
     </div>
   );
 }
-
