@@ -1,12 +1,23 @@
 package com.nhom3.Jurni_backend.config;
 
-import com.nhom3.Jurni_backend.model.*;
-import com.nhom3.Jurni_backend.repository.*;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import java.time.Instant;
-import java.util.*;
+
+import com.nhom3.Jurni_backend.model.Activity;
+import com.nhom3.Jurni_backend.model.Car;
+import com.nhom3.Jurni_backend.model.Hotel;
+import com.nhom3.Jurni_backend.model.Voucher;
+import com.nhom3.Jurni_backend.repository.ActivityRepository;
+import com.nhom3.Jurni_backend.repository.CarRepository;
+import com.nhom3.Jurni_backend.repository.HotelRepository;
+import com.nhom3.Jurni_backend.repository.VoucherRepository;
 
 @Configuration
 public class DataLoader {
@@ -471,5 +482,44 @@ public class DataLoader {
         activity.setCreatedAt(Instant.now());
         activity.setUpdatedAt(Instant.now());
         return activity;
+    }
+
+    /**
+     * Public method to seed all data
+     * Called by: AdminDataController for manual seeding
+     */
+    public void seedAll(HotelRepository hotelRepo, CarRepository carRepo, 
+                       ActivityRepository activityRepo, VoucherRepository voucherRepo) {
+        System.out.println("\n🌱 Starting data seeding...\n");
+        
+        if (hotelRepo.count() == 0) {
+            System.out.println("📦 Seeding Hotels...");
+            seedHotels(hotelRepo);
+        } else {
+            System.out.println("⏭️ Skipping Hotels (already " + hotelRepo.count() + " records)");
+        }
+
+        if (carRepo.count() == 0) {
+            System.out.println("📦 Seeding Cars...");
+            seedCars(carRepo);
+        } else {
+            System.out.println("⏭️ Skipping Cars (already " + carRepo.count() + " records)");
+        }
+
+        if (activityRepo.count() == 0) {
+            System.out.println("📦 Seeding Activities...");
+            seedActivities(activityRepo);
+        } else {
+            System.out.println("⏭️ Skipping Activities (already " + activityRepo.count() + " records)");
+        }
+
+        if (voucherRepo.count() == 0) {
+            System.out.println("📦 Seeding Vouchers...");
+            seedVouchers(voucherRepo);
+        } else {
+            System.out.println("⏭️ Skipping Vouchers (already " + voucherRepo.count() + " records)");
+        }
+
+        System.out.println("\n✅ Data seeding completed!\n");
     }
 }

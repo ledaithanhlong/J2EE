@@ -7,11 +7,13 @@ const UPLOAD_API = `${API}/upload`;
 
 const emptyForm = {
   company: '',
+  model: '',
   type: '',
   seats: 5,
-  price_per_day: '',
+  price_per_day: 0,
   available: true,
   image_url: '',
+  location: '',
   description: '',
   specifications: {
     engine: '',
@@ -38,10 +40,13 @@ export default function AdminCars() {
 
   const loadCars = async () => {
     try {
+      console.log('📥 Fetching cars from:', `${API}/cars`);
       const res = await axios.get(`${API}/cars`);
+      console.log('✓ Loaded', res.data?.length || 0, 'cars:', res.data);
       setCars(res.data || []);
     } catch (error) {
-      console.error('Error loading cars:', error);
+      console.error('❌ Error loading cars:', error.response || error.message);
+      alert('Lỗi khi tải danh sách xe');
     } finally {
       setLoading(false);
     }
@@ -107,29 +112,40 @@ export default function AdminCars() {
     try {
       const token = await getToken();
 
-      if (!form.company || !form.type) {
-        alert('Vui lòng nhập đủ thông tin bắt buộc!');
+      if (!form.company || !form.model || !form.type || !form.location || form.price_per_day <= 0) {
+        alert('Vui lòng nhập đủ thông tin bắt buộc: Hãng xe, Model, Loại xe, Giá > 0, Địa điểm!');
+        return;
+      }
+
+      // Ensure price_per_day is always a valid number
+      const pricePerDay = Number(form.price_per_day);
+      if (isNaN(pricePerDay) || pricePerDay <= 0) {
+        alert('Giá/ngày phải là số dương!');
         return;
       }
 
       const data = {
         ...form,
         seats: Number(form.seats),
-        price_per_day: Number(form.price_per_day),
+        price_per_day: pricePerDay,
         available: form.available === true || form.available === 'true',
         specifications: Object.keys(form.specifications).length > 0 ? form.specifications : null,
         amenities: form.amenities.length > 0 ? form.amenities : null
       };
 
+      console.log('Sending car data:', data);
+      
       if (editing) {
-        await axios.put(`${API}/cars/${editing}`, data, {
+        const response = await axios.put(`${API}/cars/${editing}`, data, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        console.log('Update response:', response.data);
         alert('Cập nhật thành công!');
       } else {
-        await axios.post(`${API}/cars`, data, {
+        const response = await axios.post(`${API}/cars`, data, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        console.log('Create response:', response.data);
         alert('Tạo thành công!');
       }
       setShowForm(false);
@@ -137,20 +153,27 @@ export default function AdminCars() {
       setForm(emptyForm);
       loadCars();
     } catch (error) {
-      console.error('Error saving car:', error);
-      alert(error.response?.data?.error || 'Lỗi khi lưu xe');
+      console.error('Error saving car:', error.response || error.message);
+      console.error('Full error:', error);
+      alert(error.response?.data?.error || error.message || 'Lỗi khi lưu xe');
     }
   };
 
   const handleEdit = (car) => {
     setEditing(car.id);
+    // Handle both camelCase (from API) and snake_case
+    const priceValue = car.price_per_day || car.pricePerDay || 0;
+    const imageValue = car.image_url || car.imageUrl || '';
+    
     setForm({
       company: car.company || '',
+      model: car.model || '',
       type: car.type || '',
       seats: car.seats || 5,
-      price_per_day: car.price_per_day || '',
+      price_per_day: Number(priceValue) || 0,
       available: car.available !== undefined ? car.available : true,
-      image_url: car.image_url || '',
+      image_url: imageValue,
+      location: car.location || '',
       description: car.description || '',
       specifications: car.specifications || {
         engine: '',
@@ -222,6 +245,17 @@ export default function AdminCars() {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Model xe *</label>
+                  <input
+                    type="text"
+                    value={form.model}
+                    onChange={(e) => setForm({ ...form, model: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
+                    placeholder="Camry, CR-V, Vios, ..."
+                    required
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Loại xe *</label>
                   <input
                     type="text"
@@ -250,11 +284,13 @@ export default function AdminCars() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Giá/ngày (VNĐ) *</label>
                   <input
                     type="number"
-                    value={form.price_per_day}
-                    onChange={(e) => setForm({ ...form, price_per_day: e.target.value })}
+                    value={form.price_per_day || 0}
+                    onChange={(e) => setForm({ ...form, price_per_day: Number(e.target.value) || 0 })}
                     className="w-full border rounded-lg px-3 py-2"
                     required
-                    min="0"
+                    min="1"
+                    step="1000"
+                    placeholder="0"
                   />
                 </div>
                 <div>
@@ -267,6 +303,17 @@ export default function AdminCars() {
                     <option value={true}>Có sẵn</option>
                     <option value={false}>Không có sẵn</option>
                   </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Địa điểm *</label>
+                  <input
+                    type="text"
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
+                    placeholder="TP.HCM, Hà Nội, Đà Nẵng, ..."
+                    required
+                  />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Hình ảnh</label>
@@ -425,35 +472,41 @@ export default function AdminCars() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {cars.map((car) => (
-                <tr key={car.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      {car.image_url && (
-                        <img src={car.image_url} alt={car.type} className="w-16 h-16 object-cover rounded" />
-                      )}
-                      <div>
-                        <div className="font-semibold">{car.company} {car.type}</div>
-                        <div className="text-xs text-gray-500">{car.description?.slice(0, 50)}...</div>
+              {cars.map((car) => {
+                // Handle both camelCase (from API) and snake_case
+                const pricePerDay = car.price_per_day || car.pricePerDay || 0;
+                const imageUrl = car.image_url || car.imageUrl || '';
+                return (
+                  <tr key={car.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {imageUrl && (
+                          <img src={imageUrl} alt={car.type} className="w-16 h-16 object-cover rounded" />
+                        )}
+                        <div>
+                          <div className="font-semibold">{car.company} {car.type}</div>
+                          <div className="text-xs text-gray-500">{car.description?.slice(0, 50)}...</div>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">{car.seats} chỗ</td>
-                  <td className="px-6 py-4 text-orange-600 font-bold">
-                    {formatPrice(car.price_per_day)} đ
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs rounded-full ${car.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    </td>
+                    <td className="px-6 py-4">{car.seats} chỗ</td>
+                    <td className="px-6 py-4 text-orange-600 font-bold">
+                      {formatPrice(pricePerDay)} đ
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        car.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
-                      {car.available ? 'Có sẵn' : 'Đã thuê'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button onClick={() => handleEdit(car)} className="text-blue-600 mr-3 hover:text-blue-800">Sửa</button>
-                    <button onClick={() => handleDelete(car.id)} className="text-red-500 hover:text-red-700">Xóa</button>
-                  </td>
-                </tr>
-              ))}
+                        {car.available ? 'Có sẵn' : 'Đã thuê'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button onClick={() => handleEdit(car)} className="text-blue-600 mr-3 hover:text-blue-800">Sửa</button>
+                      <button onClick={() => handleDelete(car.id)} className="text-red-500 hover:text-red-700">Xóa</button>
+                    </td>
+                  </tr>
+                );
+              })}}
             </tbody>
           </table>
         </div>
