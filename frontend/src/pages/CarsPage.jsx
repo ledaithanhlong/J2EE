@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 // Professional Icon Components
 const IconUsers = () => (
@@ -60,101 +60,45 @@ const IconLocation = () => (
   </svg>
 );
 
+const normalizeCar = (car) => ({
+  ...car,
+  pricePerDay: Number(car?.pricePerDay ?? car?.price_per_day ?? 0),
+  imageUrl: car?.imageUrl ?? car?.image_url ?? '',
+  specifications:
+    typeof car?.specifications === 'string'
+      ? (() => {
+          try {
+            let parsed = JSON.parse(car.specifications);
+            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+            return parsed;
+          } catch {
+            return {};
+          }
+        })()
+      : car?.specifications || {},
+  amenities:
+    typeof car?.amenities === 'string'
+      ? (() => {
+          try {
+            let parsed = JSON.parse(car.amenities);
+            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })()
+      : Array.isArray(car?.amenities)
+        ? car.amenities
+        : [],
+});
+
 export default function CarsPage() {
   const navigate = useNavigate();
   const [rows, setRows] = useState([]);
   const [selectedCar, setSelectedCar] = useState(null);
-
-  // Rental dates
   const [pickupDate, setPickupDate] = useState('');
   const [returnDate, setReturnDate] = useState('');
 
-  const load = async () => {
-    try {
-      const res = await axios.get(`${API}/cars`);
-      setRows(res.data || []);
-    } catch (error) {
-      console.error('Error loading cars:', error);
-      setRows(sampleCars);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price || 0);
-  };
-
-  const handleBookCar = (car) => {
-    // Validate rental dates
-    if (!pickupDate || !returnDate) {
-      alert('Vui lòng chọn ngày lấy xe và ngày trả xe!');
-      return;
-    }
-
-    const pickup = new Date(pickupDate);
-    const returnD = new Date(returnDate);
-
-    if (returnD <= pickup) {
-      alert('Ngày trả xe phải sau ngày lấy xe!');
-      return;
-    }
-
-    // Calculate rental days
-    const rentalDays = Math.ceil((returnD - pickup) / (1000 * 60 * 60 * 24));
-
-    // Create cart item for the car rental
-    const cartItem = {
-      id: `car-${car.id}-${Date.now()}`,
-      name: `Thuê xe ${car.company} ${car.type}`,
-      type: `${car.seats} chỗ`,
-      price: parseFloat(car.price_per_day),
-      quantity: rentalDays,
-      image: car.image_url,
-      details: {
-        car_id: car.id,
-        company: car.company,
-        model: car.type,
-        seats: car.seats,
-        specifications: car.specifications,
-        amenities: car.amenities,
-        pickup_date: pickupDate,
-        return_date: returnDate,
-        rental_days: rentalDays
-      }
-    };
-
-    // Save to localStorage
-    try {
-      const existingCart = JSON.parse(localStorage.getItem('pendingCart') || '[]');
-      const updatedCart = [...existingCart, cartItem];
-      localStorage.setItem('pendingCart', JSON.stringify(updatedCart));
-
-      // Navigate to checkout
-      navigate('/checkout');
-    } catch (e) {
-      console.error('Failed to save to cart', e);
-      alert('Có lỗi xảy ra. Vui lòng thử lại!');
-    }
-  };
-
-  // Calculate rental days for display
-  const calculateRentalDays = () => {
-    if (!pickupDate || !returnDate) return 0;
-    const pickup = new Date(pickupDate);
-    const returnD = new Date(returnDate);
-    if (returnD <= pickup) return 0;
-    return Math.ceil((returnD - pickup) / (1000 * 60 * 60 * 24));
-  };
-
-  // Reset rental dates when modal closes
-  const handleCloseModal = () => {
-    setSelectedCar(null);
-    setPickupDate('');
-    setReturnDate('');
-  };
-
-  // Sample cars data
   const sampleCars = [
     {
       id: 1,
@@ -311,7 +255,89 @@ export default function CarsPage() {
     }
   ];
 
-  const cars = rows.length > 0 ? rows : sampleCars;
+  const load = async () => {
+    try {
+      const res = await axios.get(`${API}/cars`);
+      const normalized = Array.isArray(res.data)
+        ? res.data.map(normalizeCar)
+        : [];
+      setRows(normalized);
+    } catch (error) {
+      console.error('Error loading cars:', error);
+      setRows(sampleCars.map(normalizeCar));
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('vi-VN').format(price || 0);
+  };
+
+  const handleBookCar = (car) => {
+    if (!pickupDate || !returnDate) {
+      alert('Vui lòng chọn ngày lấy xe và ngày trả xe!');
+      return;
+    }
+
+    const pickup = new Date(pickupDate);
+    const returnD = new Date(returnDate);
+
+    if (returnD <= pickup) {
+      alert('Ngày trả xe phải sau ngày lấy xe!');
+      return;
+    }
+
+    const rentalDays = Math.ceil((returnD - pickup) / (1000 * 60 * 60 * 24));
+
+    const cartItem = {
+      id: `car-${car.id}-${Date.now()}`,
+      name: `Thuê xe ${car.company} ${car.type}`,
+      type: `${car.seats} chỗ`,
+      price: parseFloat(car.pricePerDay || 0),
+      quantity: rentalDays,
+      image: car.imageUrl,
+      details: {
+        car_id: car.id,
+        company: car.company,
+        model: car.type,
+        seats: car.seats,
+        specifications: car.specifications,
+        amenities: car.amenities,
+        pickup_date: pickupDate,
+        return_date: returnDate,
+        rental_days: rentalDays
+      }
+    };
+
+    try {
+      const existingCart = JSON.parse(localStorage.getItem('pendingCart') || '[]');
+      const updatedCart = [...existingCart, cartItem];
+      localStorage.setItem('pendingCart', JSON.stringify(updatedCart));
+      navigate('/checkout');
+    } catch (e) {
+      console.error('Failed to save to cart', e);
+      alert('Có lỗi xảy ra. Vui lòng thử lại!');
+    }
+  };
+
+  const calculateRentalDays = () => {
+    if (!pickupDate || !returnDate) return 0;
+    const pickup = new Date(pickupDate);
+    const returnD = new Date(returnDate);
+    if (returnD <= pickup) return 0;
+    return Math.ceil((returnD - pickup) / (1000 * 60 * 60 * 24));
+  };
+
+  const handleCloseModal = () => {
+    setSelectedCar(null);
+    setPickupDate('');
+    setReturnDate('');
+  };
+
+  const cars = rows.length > 0 ? rows : sampleCars.map(normalizeCar);
 
   const statistics = [
     { number: '10,000+', label: 'Khách hàng hài lòng', icon: <IconUsers /> },
@@ -344,21 +370,23 @@ export default function CarsPage() {
   ];
 
   const carTypes = [
-    { name: 'Xe 5 chỗ', icon: '🚗', count: cars.filter(c => c.seats === 5).length },
-    { name: 'Xe 7 chỗ', icon: '🚙', count: cars.filter(c => c.seats === 7).length },
-    { name: 'Xe 16 chỗ', icon: '🚐', count: cars.filter(c => c.seats === 16).length },
-    { name: 'Xe 50 chỗ', icon: '🚌', count: cars.filter(c => c.seats === 50).length }
+    { name: 'Xe 5 chỗ', icon: '🚗', count: cars.filter(c => Number(c.seats) === 5).length },
+    { name: 'Xe 7 chỗ', icon: '🚙', count: cars.filter(c => Number(c.seats) === 7).length },
+    { name: 'Xe 16 chỗ', icon: '🚐', count: cars.filter(c => Number(c.seats) === 16).length },
+    { name: 'Xe 50 chỗ', icon: '🚌', count: cars.filter(c => Number(c.seats) === 50).length }
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-blue-50/30 to-white">
-      {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-sky-700 text-white py-20 md:py-28 overflow-hidden">
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-full h-full" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='grid' width='100' height='100' patternUnits='userSpaceOnUse'%3E%3Cpath d='M 100 0 L 0 0 0 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23grid)'/%3E%3C/svg%3E")`,
-            backgroundSize: '50px 50px'
-          }}></div>
+          <div
+            className="absolute top-0 left-0 w-full h-full"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='grid' width='100' height='100' patternUnits='userSpaceOnUse'%3E%3Cpath d='M 100 0 L 0 0 0 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23grid)'/%3E%3C/svg%3E")`,
+              backgroundSize: '50px 50px'
+            }}
+          ></div>
         </div>
 
         <div className="absolute top-20 right-10 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl"></div>
@@ -367,7 +395,7 @@ export default function CarsPage() {
         <div className="max-w-7xl mx-auto px-4 relative z-10">
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full mb-8 shadow-lg">
-              <IconShield className="w-4 h-4" />
+              <IconShield />
               <span className="text-sm font-medium">Cho thuê xe chuyên nghiệp</span>
             </div>
 
@@ -390,7 +418,7 @@ export default function CarsPage() {
               </a>
               <a href="#lien-he" className="group bg-white/10 backdrop-blur-md text-white px-8 py-4 rounded-full font-bold hover:bg-white/20 transition-all duration-300 border-2 border-white/30 hover:border-white/50 shadow-xl">
                 <span className="flex items-center gap-2">
-                  <IconPhone className="w-5 h-5" />
+                  <IconPhone />
                   Liên hệ ngay
                 </span>
               </a>
@@ -399,7 +427,6 @@ export default function CarsPage() {
         </div>
       </section>
 
-      {/* Statistics Section */}
       <section className="py-16 bg-gradient-to-b from-white to-gray-50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-14">
@@ -430,11 +457,13 @@ export default function CarsPage() {
         </div>
       </section>
 
-      {/* Values & Services Section */}
       <section className="py-20 bg-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-5" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
+        <div
+          className="absolute inset-0 opacity-5"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+          }}
+        ></div>
 
         <div className="max-w-7xl mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
@@ -467,7 +496,6 @@ export default function CarsPage() {
         </div>
       </section>
 
-      {/* Quality Focus Section */}
       <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-sky-700 rounded-[2.5rem] p-10 md:p-16 text-white overflow-hidden shadow-2xl">
@@ -482,7 +510,7 @@ export default function CarsPage() {
             <div className="grid md:grid-cols-2 gap-12 relative z-10">
               <div>
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full mb-6">
-                  <IconShield className="w-5 h-5" />
+                  <IconShield />
                   <span className="text-sm font-semibold">Cam kết chất lượng</span>
                 </div>
                 <h2 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
@@ -501,7 +529,7 @@ export default function CarsPage() {
                   ].map((item, idx) => (
                     <li key={idx} className="flex items-start gap-4 group">
                       <div className="flex-shrink-0 w-8 h-8 bg-green-400/20 rounded-xl flex items-center justify-center group-hover:bg-green-400/30 transition-colors">
-                        <IconCheck className="w-5 h-5 text-green-300" />
+                        <IconCheck />
                       </div>
                       <span className="text-blue-100/90 text-base leading-relaxed pt-1">{item}</span>
                     </li>
@@ -529,7 +557,6 @@ export default function CarsPage() {
         </div>
       </section>
 
-      {/* Diverse Car Types Section */}
       <section className="py-20 bg-gradient-to-b from-white via-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
@@ -558,7 +585,6 @@ export default function CarsPage() {
         </div>
       </section>
 
-      {/* Cars Listing */}
       <section id="xe" className="py-20 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
@@ -569,6 +595,7 @@ export default function CarsPage() {
               Khám phá các loại xe và đặt thuê ngay hôm nay
             </p>
           </div>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {cars.map((car) => (
               <div
@@ -576,9 +603,9 @@ export default function CarsPage() {
                 className="group bg-white rounded-3xl overflow-hidden shadow-lg border-2 border-gray-100 hover:border-orange-500 hover:shadow-2xl transition-all duration-300"
               >
                 <div className="relative overflow-hidden">
-                  {car.image_url ? (
+                  {car.imageUrl ? (
                     <img
-                      src={car.image_url}
+                      src={car.imageUrl}
                       alt={`${car.company} ${car.type}`}
                       className="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
@@ -593,11 +620,12 @@ export default function CarsPage() {
                     </div>
                   )}
                 </div>
+
                 <div className="p-6">
                   <h3 className="text-xl font-bold text-gray-900 mb-1">{car.company} {car.type}</h3>
                   <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                     <span className="flex items-center gap-1">
-                      <IconUsers className="w-4 h-4" />
+                      <IconUsers />
                       {car.seats} chỗ
                     </span>
                   </div>
@@ -605,7 +633,7 @@ export default function CarsPage() {
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                     <div>
                       <div className="text-2xl font-bold" style={{ color: '#FF6B35' }}>
-                        {formatPrice(car.price_per_day)} VND
+                        {formatPrice(car.pricePerDay)} VND
                       </div>
                       <div className="text-xs text-gray-500">/ ngày</div>
                     </div>
@@ -620,7 +648,7 @@ export default function CarsPage() {
               </div>
             ))}
           </div>
-          {/* Detail Modal */}
+
           {selectedCar && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={handleCloseModal}>
               <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -633,24 +661,27 @@ export default function CarsPage() {
                     ×
                   </button>
                 </div>
+
                 <div className="p-6 space-y-6">
-                  {selectedCar.image_url && (
+                  {selectedCar.imageUrl && (
                     <img
-                      src={selectedCar.image_url}
+                      src={selectedCar.imageUrl}
                       alt={`${selectedCar.company} ${selectedCar.type}`}
                       className="w-full h-64 object-cover rounded-xl"
                     />
                   )}
+
                   <div>
                     <div className="mb-4">
                       <div className="text-3xl font-bold mb-2" style={{ color: '#FF6B35' }}>
-                        {formatPrice(selectedCar.price_per_day)} VND
+                        {formatPrice(selectedCar.pricePerDay)} VND
                       </div>
                       <div className="text-gray-600">/ ngày</div>
                     </div>
+
                     <div className="space-y-3 mb-4">
                       <div className="flex items-center gap-2 text-gray-700">
-                        <IconUsers className="w-5 h-5 text-blue-600" />
+                        <IconUsers />
                         <span className="font-medium">Số chỗ: {selectedCar.seats} chỗ</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -659,12 +690,12 @@ export default function CarsPage() {
                         </span>
                       </div>
                     </div>
+
                     {selectedCar.description && (
                       <p className="text-gray-700 mb-4">{selectedCar.description}</p>
                     )}
                   </div>
 
-                  {/* Rental Period */}
                   <div className="mb-6 bg-gradient-to-br from-blue-50 to-sky-50 rounded-xl p-6 border-2 border-blue-200">
                     <h3 className="text-xl font-bold text-gray-900 mb-4">🚗 Thời gian thuê xe</h3>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -695,6 +726,7 @@ export default function CarsPage() {
                         />
                       </div>
                     </div>
+
                     {calculateRentalDays() > 0 && (
                       <div className="mt-4 pt-4 border-t border-blue-300">
                         <div className="flex justify-between items-center">
@@ -705,10 +737,10 @@ export default function CarsPage() {
                           <div className="text-right">
                             <div className="text-sm text-gray-600 mb-1">Tổng tiền:</div>
                             <div className="text-3xl font-extrabold" style={{ color: '#FF6B35' }}>
-                              {formatPrice(selectedCar.price_per_day * calculateRentalDays())} đ
+                              {formatPrice(selectedCar.pricePerDay * calculateRentalDays())} đ
                             </div>
                             <div className="text-xs text-gray-500">
-                              {formatPrice(selectedCar.price_per_day)} đ/ngày × {calculateRentalDays()} ngày
+                              {formatPrice(selectedCar.pricePerDay)} đ/ngày × {calculateRentalDays()} ngày
                             </div>
                           </div>
                         </div>
@@ -716,31 +748,14 @@ export default function CarsPage() {
                     )}
                   </div>
 
-                  {/* Specifications */}
                   {selectedCar.specifications && (
                     <div className="mb-6">
                       <h3 className="text-xl font-bold text-gray-900 mb-4">Thông số kỹ thuật</h3>
                       <div className="grid md:grid-cols-2 gap-4">
                         {(() => {
-                          let specs = selectedCar.specifications;
+                          const specs = selectedCar.specifications;
 
-                          // Handle if specifications is a string (JSON) - may be double stringified
-                          if (typeof specs === 'string') {
-                            try {
-                              specs = JSON.parse(specs);
-                              // Check if still a string after first parse (double stringified)
-                              if (typeof specs === 'string') {
-                                specs = JSON.parse(specs);
-                              }
-                            } catch (e) {
-                              console.error('Error parsing specifications:', e, specs);
-                              return <p className="text-gray-500 text-sm">Không có thông tin kỹ thuật</p>;
-                            }
-                          }
-
-                          // Handle if specs is not an object or is empty
                           if (!specs || typeof specs !== 'object' || Array.isArray(specs)) {
-                            console.warn('Invalid specifications format:', specs);
                             return <p className="text-gray-500 text-sm">Không có thông tin kỹ thuật</p>;
                           }
 
@@ -767,50 +782,24 @@ export default function CarsPage() {
                     </div>
                   )}
 
-                  {/* Amenities */}
                   {selectedCar.amenities && (
                     <div className="mb-6">
                       <h3 className="text-xl font-bold text-gray-900 mb-4">Tiện nghi</h3>
                       <div className="grid md:grid-cols-2 gap-3">
-                        {(() => {
-                          let amenities = selectedCar.amenities;
-
-                          // Handle if amenities is a string (JSON)
-                          if (typeof amenities === 'string') {
-                            try {
-                              amenities = JSON.parse(amenities);
-                              // Check if still a string (double stringified)
-                              if (typeof amenities === 'string') {
-                                amenities = JSON.parse(amenities);
-                              }
-                            } catch (e) {
-                              console.error('Error parsing amenities:', e, amenities);
-                              return <p className="text-gray-500 text-sm col-span-2">Không có thông tin tiện nghi</p>;
-                            }
-                          }
-
-                          // Handle if not an array
-                          if (!Array.isArray(amenities)) {
-                            console.warn('Invalid amenities format:', amenities);
-                            return <p className="text-gray-500 text-sm col-span-2">Không có thông tin tiện nghi</p>;
-                          }
-
-                          if (amenities.length === 0) {
-                            return <p className="text-gray-500 text-sm col-span-2">Chưa có tiện nghi</p>;
-                          }
-
-                          return amenities.map((amenity, idx) => (
+                        {Array.isArray(selectedCar.amenities) && selectedCar.amenities.length > 0 ? (
+                          selectedCar.amenities.map((amenity, idx) => (
                             <div key={idx} className="flex items-center gap-3 bg-blue-50 rounded-lg p-3">
-                              <IconCheck className="w-5 h-5 text-green-600 flex-shrink-0" />
+                              <IconCheck />
                               <span className="text-gray-700">{amenity}</span>
                             </div>
-                          ));
-                        })()}
+                          ))
+                        ) : (
+                          <p className="text-gray-500 text-sm col-span-2">Không có thông tin tiện nghi</p>
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {/* Rental Conditions */}
                   <div className="mb-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-4">Điều kiện thuê xe</h3>
                     <div className="space-y-4">
@@ -841,7 +830,6 @@ export default function CarsPage() {
                     </div>
                   </div>
 
-                  {/* Contact */}
                   <div id="lien-he" className="bg-gradient-to-r from-blue-600 to-sky-600 rounded-xl p-6 text-white">
                     <h3 className="text-xl font-bold mb-4">Liên Hệ Thuê Xe</h3>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -874,7 +862,13 @@ export default function CarsPage() {
                         </div>
                       </div>
                     </div>
-                    <button className="mt-4 w-full bg-white px-6 py-3 rounded-full font-semibold transition" style={{ color: '#FF6B35' }} onClick={() => handleBookCar(selectedCar)} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FFE8E0'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
+                    <button
+                      className="mt-4 w-full bg-white px-6 py-3 rounded-full font-semibold transition"
+                      style={{ color: '#FF6B35' }}
+                      onClick={() => handleBookCar(selectedCar)}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FFE8E0')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+                    >
                       Đặt thuê xe ngay
                     </button>
                   </div>
