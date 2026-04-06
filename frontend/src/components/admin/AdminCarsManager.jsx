@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { useAuth } from "@clerk/clerk-react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
@@ -32,10 +33,10 @@ function normalizeCar(car) {
     company: car?.company || "",
     model: car?.model || "",
     type: car?.type || "",
-    pricePerDay: car?.pricePerDay ?? "",
+    pricePerDay: car?.price_per_day ?? car?.pricePerDay ?? "",
     seats: String(car?.seats ?? "5"),
     location: car?.location || "",
-    imageUrl: car?.imageUrl || "",
+    imageUrl: car?.image_url || car?.imageUrl || "",
     available: car?.available ?? true,
     description: car?.description || "",
     engine: specs.engine || "",
@@ -51,10 +52,10 @@ function buildPayload(form) {
     company: form.company.trim(),
     model: form.model.trim(),
     type: form.type.trim(),
-    pricePerDay: Number(form.pricePerDay),
+    price_per_day: Number(form.pricePerDay),
     seats: Number(form.seats),
     location: form.location.trim(),
-    imageUrl: form.imageUrl.trim(),
+    image_url: form.imageUrl.trim(),
     available: !!form.available,
     description: form.description.trim(),
     specifications: {
@@ -71,6 +72,7 @@ function buildPayload(form) {
 }
 
 export default function AdminCarsManager() {
+  const { getToken } = useAuth();
   const [cars, setCars] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -161,12 +163,17 @@ export default function AdminCarsManager() {
       setMessage("");
 
       const payload = buildPayload(form);
+      const token = await getToken();
 
       if (editingId) {
-        await axios.put(`${API}/cars/${editingId}`, payload);
+        await axios.put(`${API}/cars/${editingId}`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setMessage("Cập nhật xe thành công.");
       } else {
-        await axios.post(`${API}/cars`, payload);
+        await axios.post(`${API}/cars`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setMessage("Thêm xe thành công.");
       }
 
@@ -187,7 +194,10 @@ export default function AdminCarsManager() {
     try {
       setError("");
       setMessage("");
-      await axios.delete(`${API}/cars/${id}`);
+      const token = await getToken();
+      await axios.delete(`${API}/cars/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setMessage("Xóa xe thành công.");
       if (editingId === id) resetForm();
       await loadCars();
@@ -444,9 +454,9 @@ export default function AdminCarsManager() {
                   key={car.id}
                   className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm"
                 >
-                  {car.imageUrl ? (
+                  {(car.image_url || car.imageUrl) ? (
                     <img
-                      src={car.imageUrl}
+                      src={car.image_url || car.imageUrl}
                       alt={`${car.company} ${car.model}`}
                       className="h-44 w-full object-cover"
                     />
@@ -467,7 +477,7 @@ export default function AdminCarsManager() {
                           {car.location || "Chưa có địa điểm"} · {car.seats} chỗ
                         </p>
                         <p className="mt-2 font-semibold text-blue-600">
-                          {(car.pricePerDay || 0).toLocaleString("vi-VN")} đ/ngày
+                          {((car.price_per_day ?? car.pricePerDay) || 0).toLocaleString("vi-VN")} đ/ngày
                         </p>
                       </div>
 

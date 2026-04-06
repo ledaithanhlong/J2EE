@@ -45,8 +45,8 @@ public class DataLoader {
                 seedHotels(hotelRepo);
             }
             if (carRepo.count() == 0) {
-                System.out.println("🌱 Seeding Cars...");
-                seedCars(carRepo);
+                System.out.println("🌱 Skipping Auto-seeding Cars (per user request)...");
+                // seedCars(carRepo);
             }
             if (voucherRepo.count() == 0) {
                 System.out.println("🌱 Seeding Vouchers...");
@@ -510,8 +510,8 @@ public class DataLoader {
         }
 
         if (carRepo.count() == 0) {
-            System.out.println("📦 Seeding Cars...");
-            seedCars(carRepo);
+            System.out.println("📦 Skipping Seeding Cars (per user request)...");
+            // seedCars(carRepo);
         } else {
             System.out.println("⏭️ Skipping Cars (already " + carRepo.count() + " records)");
         }
