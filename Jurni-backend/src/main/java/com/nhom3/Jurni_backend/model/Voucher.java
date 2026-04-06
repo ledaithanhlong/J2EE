@@ -8,6 +8,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Instant;
 
@@ -23,13 +24,29 @@ public class Voucher {
     @Indexed(unique = true)
     private String code;
 
+    @JsonProperty("discount_percent")
     private Integer discountPercent;
+
+    @JsonProperty("discount_amount")
     private Double discountAmount;
+
+    @JsonProperty("min_spend")
     private Double minSpend;
+
+    @JsonProperty("max_discount")
     private Double maxDiscount;
+
+    @JsonProperty("start_date")
     private Instant startDate;
+
+    @JsonProperty("expiry_date")
     private Instant expiryDate;
+
+    @JsonProperty("usage_limit")
     private Integer usageLimit;
+
+    @JsonProperty("current_usage")
+    private Integer currentUsage = 0;
 
     @CreatedDate
     private Instant createdAt;

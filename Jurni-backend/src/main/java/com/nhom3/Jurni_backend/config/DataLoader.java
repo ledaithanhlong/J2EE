@@ -465,6 +465,7 @@ public class DataLoader {
         activity.setImageUrl(imageUrl);
         activity.setCategory(category);
         activity.setIncludes(includes);
+        activity.setHighlights(Arrays.asList()); // Empty by default
         activity.setMeetingPoint(meetingPoint);
         activity.setPolicies(policies);
         activity.setCreatedAt(Instant.now());

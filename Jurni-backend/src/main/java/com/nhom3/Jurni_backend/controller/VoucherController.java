@@ -39,13 +39,27 @@ public class VoucherController {
 
     @PostMapping
     public ResponseEntity<?> createVoucher(@RequestBody Voucher voucher) {
+        // Validation
+        if (voucher.getCode() == null || voucher.getCode().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Mã voucher không được để trống"));
+        }
+        if ((voucher.getDiscountPercent() == null || voucher.getDiscountPercent() <= 0) &&
+            (voucher.getDiscountAmount() == null || voucher.getDiscountAmount() <= 0)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Chiết khấu phải > 0"));
+        }
+        if (voucher.getExpiryDate() == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Ngày hết hạn không được để trống"));
+        }
+        if (voucher.getCurrentUsage() == null) {
+            voucher.setCurrentUsage(0);
+        }
         return ResponseEntity.status(201).body(voucherRepository.save(voucher));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateVoucher(@PathVariable String id, @RequestBody Voucher body) {
         return voucherRepository.findById(id).map(v -> {
-            if (body.getCode() != null) v.setCode(body.getCode());
+            if (body.getCode() != null && !body.getCode().trim().isEmpty()) v.setCode(body.getCode());
             if (body.getDiscountPercent() != null) v.setDiscountPercent(body.getDiscountPercent());
             if (body.getDiscountAmount() != null) v.setDiscountAmount(body.getDiscountAmount());
             if (body.getMinSpend() != null) v.setMinSpend(body.getMinSpend());
@@ -53,6 +67,7 @@ public class VoucherController {
             if (body.getStartDate() != null) v.setStartDate(body.getStartDate());
             if (body.getExpiryDate() != null) v.setExpiryDate(body.getExpiryDate());
             if (body.getUsageLimit() != null) v.setUsageLimit(body.getUsageLimit());
+            if (body.getCurrentUsage() != null) v.setCurrentUsage(body.getCurrentUsage());
             return ResponseEntity.ok(voucherRepository.save(v));
         }).orElse(ResponseEntity.notFound().build());
     }

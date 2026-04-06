@@ -32,6 +32,22 @@ public class CarController {
 
     @PostMapping
     public ResponseEntity<?> createCar(@RequestBody Car car) {
+        // Validation
+        if (car.getCompany() == null || car.getCompany().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Hãng xe không được để trống"));
+        }
+        if (car.getModel() == null || car.getModel().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Model không được để trống"));
+        }
+        if (car.getSeats() == null || car.getSeats() <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Số chỗ ngồi phải > 0"));
+        }
+        if (car.getPricePerDay() == null || car.getPricePerDay() <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Giá thuê phải > 0"));
+        }
+        if (car.getAvailable() == null) {
+            car.setAvailable(true);
+        }
         return ResponseEntity.status(201).body(carRepository.save(car));
     }
 

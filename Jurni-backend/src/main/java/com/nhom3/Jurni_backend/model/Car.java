@@ -7,6 +7,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Instant;
 import java.util.List;
@@ -24,10 +25,16 @@ public class Car {
     private String company;
     private String model;
     private String type;
+
+    @JsonProperty("price_per_day")
     private Double pricePerDay;
+
     private Integer seats;
     private String location;
+
+    @JsonProperty("image_url")
     private String imageUrl;
+
     private Boolean available = true;
     private String description;
     private Map<String, Object> specifications;
