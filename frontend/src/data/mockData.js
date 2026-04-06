@@ -173,6 +173,38 @@ export const sampleHotels = [
     }
 ];
 
+export const sampleVouchers = [
+    {
+        id: 'v1',
+        code: 'WELCOME',
+        discount_percent: 10,
+        max_discount: 500000,
+        min_spend: 0,
+        expiry_date: '2026-12-31T23:59:59Z',
+        usage_limit: 1000,
+        current_usage: 0
+    },
+    {
+        id: 'v2',
+        code: 'JRNBANMOI',
+        discount_amount: 50000,
+        min_spend: 200000,
+        expiry_date: '2026-12-31T23:59:59Z',
+        usage_limit: 500,
+        current_usage: 0
+    },
+    {
+        id: 'v3',
+        code: 'JURNI2025',
+        discount_percent: 20,
+        max_discount: 1000000,
+        min_spend: 1000000,
+        expiry_date: '2026-12-31T23:59:59Z',
+        usage_limit: 100,
+        current_usage: 0
+    }
+];
+
 // Sample activities data (moved from ActivitiesPage.jsx)
 export const sampleActivities = [
     {

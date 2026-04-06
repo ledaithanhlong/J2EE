@@ -27,7 +27,25 @@ public class UserController {
     public ResponseEntity<?> getUser(@PathVariable String id) {
         return userRepository.findById(id)
             .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+            .orElseGet(() -> {
+                return userRepository.findByClerkId(id)
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+            });
+    }
+
+    @PostMapping("/sync")
+    public ResponseEntity<?> syncUser(@RequestBody Map<String, Object> body) {
+        String clerkId = (String) body.get("clerkId");
+        if (clerkId == null) return ResponseEntity.badRequest().body("clerkId is required");
+
+        User user = userRepository.findByClerkId(clerkId).orElse(new User());
+        user.setClerkId(clerkId);
+        if (body.containsKey("email")) user.setEmail((String) body.get("email"));
+        if (body.containsKey("name")) user.setName((String) body.get("name"));
+        if (user.getRole() == null) user.setRole("user");
+
+        return ResponseEntity.ok(userRepository.save(user));
     }
 
     @PutMapping("/{id}")

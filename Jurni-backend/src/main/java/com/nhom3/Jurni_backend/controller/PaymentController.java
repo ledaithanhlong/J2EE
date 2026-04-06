@@ -22,18 +22,30 @@ public class PaymentController {
     }
 
     private static final List<Map<String, Object>> PAYMENT_METHODS = List.of(
-        Map.of("id","card","name","Thẻ quốc tế (Visa / Mastercard)","type","card",
-               "feePercent",0.018,"feeFixed",0,
-               "description","Thanh toán tức thời với thẻ Visa, Mastercard hoặc JCB."),
+        Map.of("id","internet-banking","name","Internet Banking","type","bank",
+               "feePercent",0.0,"feeFixed",0,
+               "description","Thanh toán online qua tài khoản ngân hàng nội địa."),
+        Map.of("id","atm-card","name","Thẻ ATM nội địa","type","atm",
+               "feePercent",0.01,"feeFixed",0,
+               "description","Thanh toán bằng thẻ ATM đã kích hoạt chức năng online."),
         Map.of("id","momo","name","Ví điện tử MoMo","type","ewallet",
-               "feePercent",0.012,"feeFixed",2000,
+               "feePercent",0.01,"feeFixed",0,
                "description","Quét mã QR hoặc xác nhận trên ứng dụng MoMo."),
         Map.of("id","zalopay","name","Ví ZaloPay","type","ewallet",
-               "feePercent",0.01,"feeFixed",1500,
+               "feePercent",0.01,"feeFixed",0,
                "description","Xác nhận giao dịch qua ứng dụng ZaloPay."),
-        Map.of("id","bank_transfer","name","Chuyển khoản ngân hàng","type","bank",
+        Map.of("id","viettelpay","name","ViettelPay","type","ewallet",
+               "feePercent",0.01,"feeFixed",0,
+               "description","Thanh toán nhanh qua ViettelPay."),
+        Map.of("id","vnpay-qr","name","VNPAY QR","type","qr",
                "feePercent",0.0,"feeFixed",0,
-               "description","Miễn phí. Hoàn tất trong vòng 15 phút kể từ khi nhận tiền.")
+               "description","Quét mã QRPay hỗ trợ tất cả ngân hàng/ ví liên kết."),
+        Map.of("id","visa","name","Visa","type","card",
+               "feePercent",0.025,"feeFixed",0,
+               "description","Thanh toán bằng thẻ Visa Credit/Debit."),
+        Map.of("id","mastercard","name","Mastercard","type","card",
+               "feePercent",0.025,"feeFixed",0,
+               "description","Thanh toán bằng thẻ Mastercard Credit/Debit.")
     );
 
     @GetMapping("/config")
@@ -52,6 +64,11 @@ public class PaymentController {
 
     @PostMapping("/process")
     public ResponseEntity<?> processPayment(@RequestBody Map<String, Object> body) {
+        return checkout(body);
+    }
+
+    @PostMapping("/checkout")
+    public ResponseEntity<?> checkout(@RequestBody Map<String, Object> body) {
         try {
             Object amountObj = body.get("amount");
             String paymentMethodId = (String) body.get("paymentMethod");
@@ -85,16 +102,38 @@ public class PaymentController {
             double fee = amount * feePercent + feeFixed;
             String transactionRef = "PAY-" + System.currentTimeMillis();
 
-            // Find or create system user
-            String systemUserId = userRepository.findByEmail("system@jurni.com")
-                .map(User::getId)
-                .orElseGet(() -> {
-                    User sys = new User();
-                    sys.setName("System User");
-                    sys.setEmail("system@jurni.com");
-                    sys.setRole("user");
-                    return userRepository.save(sys).getId();
-                });
+            // Try to use the logged-in user ID from payload
+            String payloadUserId = (String) body.get("user_id");
+            final String finalUserId;
+            
+            if (payloadUserId != null && !payloadUserId.isEmpty()) {
+                // If it looks like a Clerk ID (starts with user_), find or create internal user
+                if (payloadUserId.startsWith("user_")) {
+                    finalUserId = userRepository.findByClerkId(payloadUserId)
+                        .map(User::getId)
+                        .orElseGet(() -> {
+                            User newUser = new User();
+                            newUser.setClerkId(payloadUserId);
+                            newUser.setName((String) customer.get("name"));
+                            newUser.setEmail((String) customer.get("email"));
+                            newUser.setRole("user");
+                            return userRepository.save(newUser).getId();
+                        });
+                } else {
+                    finalUserId = payloadUserId;
+                }
+            } else {
+                // Fallback to system user
+                finalUserId = userRepository.findByEmail("system@jurni.com")
+                    .map(User::getId)
+                    .orElseGet(() -> {
+                        User sys = new User();
+                        sys.setName("System User");
+                        sys.setEmail("system@jurni.com");
+                        sys.setRole("user");
+                        return userRepository.save(sys).getId();
+                    });
+            }
 
             List<Booking> createdBookings = new ArrayList<>();
 
@@ -111,7 +150,7 @@ public class PaymentController {
                     String refId = extractRefId(itemId);
 
                     Booking booking = new Booking();
-                    booking.setUserId(systemUserId);
+                    booking.setUserId(finalUserId);
                     booking.setServiceType(serviceType);
                     booking.setTotalPrice(parseDouble(item.get("price"), 0) * parseInt(item.get("quantity"), 1));
                     booking.setStatus("pending");
@@ -156,7 +195,7 @@ public class PaymentController {
         String t = type != null ? type.toLowerCase() : "";
         String i = id != null ? id.toLowerCase() : "";
         if (t.contains("hotel") || t.contains("khách sạn") || i.contains("hotel")) return "hotel";
-        if (t.contains("flight") || t.contains("chuyến bay") || i.contains("flight")) return "flight";
+        if (t.contains("flight") || t.contains("chuyến bay") || i.contains("flight") || t.contains("vé máy bay")) return "flight";
         if (t.contains("car") || t.contains("thuê xe") || i.contains("car")) return "car";
         if (t.contains("activity") || t.contains("hoạt động") || i.contains("activity")) return "activity";
         return null;

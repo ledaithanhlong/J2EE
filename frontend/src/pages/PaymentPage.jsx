@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useUser } from '@clerk/clerk-react';
+import { sampleVouchers } from '../data/mockData';
 
 const formatCurrency = (value = 0, currency = 'VND') => {
   const number = Number(value) || 0;
@@ -203,9 +204,15 @@ export default function PaymentPage() {
       try {
         const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
         const res = await axios.get(`${API}/vouchers`);
-        setVouchers(res.data);
+        const data = res.data || [];
+        if (data.length === 0) {
+          setVouchers(sampleVouchers);
+        } else {
+          setVouchers(data);
+        }
       } catch (e) {
-        console.error('Failed to fetch vouchers', e);
+        console.error('Failed to fetch vouchers, using samples', e);
+        setVouchers(sampleVouchers);
       }
     })();
   }, []);
@@ -274,7 +281,7 @@ export default function PaymentPage() {
 
     if (!voucherCode.trim()) return;
 
-    const voucher = vouchers.find(v => v.code === voucherCode.trim());
+    const voucher = vouchers.find(v => v.code?.toUpperCase() === voucherCode.trim().toUpperCase());
     if (!voucher) {
       setVoucherError('Mã giảm giá không hợp lệ');
       return;
@@ -351,7 +358,6 @@ export default function PaymentPage() {
     try {
       const payload = {
         amount: total,
-        currency: 'VND',
         currency: 'VND',
         paymentMethod: form.paymentMethod,
         customer: {

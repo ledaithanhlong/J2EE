@@ -32,17 +32,63 @@ import CareersPage from '../pages/CareersPage.jsx';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+const UserSync = () => {
+  const { user } = useUser();
+  const { isSignedIn } = useAuth();
+
+  useEffect(() => {
+    if (isSignedIn && user) {
+      axios.post(`${API}/users/sync`, {
+        clerkId: user.id,
+        email: user.primaryEmailAddress?.emailAddress,
+        name: user.fullName || user.username
+      }).catch(err => console.error("User sync failed", err));
+    }
+  }, [isSignedIn, user]);
+
+  return null;
+};
+
 const NavUserSection = () => {
   const { user } = useUser();
+  const { getToken } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
   const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim());
   const isAdmin = user?.primaryEmailAddress?.emailAddress && adminEmails.includes(user.primaryEmailAddress.emailAddress);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const token = await getToken();
+        if (!token || !user) return;
+        const res = await axios.get(`${API}/notifications?userId=${user.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const unread = res.data.filter(n => !n.isRead).length;
+        setUnreadCount(unread);
+      } catch (e) {
+        console.error('Failed to fetch unread notifications', e);
+      }
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000); // Check every 30s
+    return () => clearInterval(interval);
+  }, [user, getToken]);
 
   return (
     <>
       <Link to="/bookings" className="text-sm text-white/90 hover:text-orange-accent transition drop-shadow-sm whitespace-nowrap">Đặt chỗ của tôi</Link>
       <Link to="/checkout" className="text-sm text-white/90 hover:text-orange-accent transition drop-shadow-sm whitespace-nowrap">Thanh toán</Link>
       <Link to="/favorites" className="text-sm text-white/90 hover:text-orange-accent transition drop-shadow-sm whitespace-nowrap">Yêu thích</Link>
-      <Link to="/notifications" className="text-sm text-white/90 hover:text-orange-accent transition drop-shadow-sm whitespace-nowrap">Thông báo</Link>
+      <Link to="/notifications" className="text-sm text-white/90 hover:text-orange-accent transition drop-shadow-sm whitespace-nowrap relative">
+        Thông báo
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-2 bg-orange-500 text-white text-[10px] font-bold px-1 rounded-full min-w-[16px] h-4 flex items-center justify-center border border-blue-900">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </Link>
       {isAdmin && (
         <Link
           to="/admin"
@@ -125,6 +171,10 @@ const Nav = ({ clerkEnabled }) => {
 
 const AdminOnly = ({ children, clerkEnabled }) => {
   if (!clerkEnabled) return <Navigate to="/" replace />;
+  return <AdminOnlyWithClerk>{children}</AdminOnlyWithClerk>;
+};
+
+const AdminOnlyWithClerk = ({ children }) => {
   const { user, isLoaded } = useUser();
   const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map(e => e.trim());
   const isAdmin = user?.primaryEmailAddress?.emailAddress && adminEmails.includes(user.primaryEmailAddress.emailAddress);
@@ -218,6 +268,7 @@ function SyncUser() {
 export default function App({ clerkEnabled }) {
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      <UserSync />
       <Nav clerkEnabled={clerkEnabled} />
       <main className="flex-1 pt-16">
         {/* Sync user when signed in */}
@@ -257,7 +308,7 @@ export default function App({ clerkEnabled }) {
         </Routes>
 
       </main>
-      <ChatWidget />
+      <ChatWidget clerkEnabled={clerkEnabled} />
       <footer className="text-white" style={{ backgroundColor: '#0D47A1' }}>
         <div className="max-w-7xl mx-auto px-4 py-8 grid gap-8 md:grid-cols-3">
           <div>
@@ -280,8 +331,8 @@ export default function App({ clerkEnabled }) {
               Thông tin liên hệ
             </h3>
             <ul className="space-y-2 text-sm text-white/80">
-              <li>
-                Giảng viên hướng dẫn: <span className="font-semibold">Trần Đăng Khoa</span>
+           <li>
+                Giảng viên hướng dẫn: <span className="font-semibold">Bùi Phú Khuyên</span>
               </li>
               <li>
                 Lớp học: <span className="font-semibold">22DTHD4</span>
